@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
 import { colors, spacing } from '@/constants/theme';
 import { MajlisStatus, StatusItem, statusItems } from '@/data/mock';
+import { AuthUser, logout, subscribeToAuthState } from '@/lib/auth';
 import { fetchIslamicCalendarYears, fetchTodayMajlis, updateIslamicMonthLength, updateMajlisStatus } from '@/lib/api';
 import { getHoustonDate, IslamicCalendarYear } from '@/lib/calendarUtils';
 
@@ -15,15 +17,27 @@ export default function AdminScreen() {
   const [calendarYears, setCalendarYears] = useState<IslamicCalendarYear[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [calendarNotice, setCalendarNotice] = useState('');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    const unsubscribe = subscribeToAuthState((user) => {
+      setAuthUser(user);
+      setAuthReady(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!authUser?.isAdmin) return;
+
     fetchTodayMajlis().then(setItems);
     fetchIslamicCalendarYears().then((years) => {
       const sorted = [...years].sort((a, b) => b.year - a.year);
       setCalendarYears(sorted);
       setSelectedYear((current) => current || sorted.find((year) => year.firstDate <= getHoustonDate())?.year || sorted[0]?.year || null);
     });
-  }, []);
+  }, [authUser?.isAdmin]);
 
   const activeCalendarYear = useMemo(
     () => calendarYears.find((year) => year.year === selectedYear) || calendarYears[0],
@@ -57,6 +71,41 @@ export default function AdminScreen() {
   return (
     <AppShell title="Status Admin" subtitle="Prototype local controls" compact>
       <View style={styles.stack}>
+        {!authReady ? (
+          <Card>
+            <Text style={styles.sectionTitle}>Checking Login</Text>
+            <Text style={styles.sectionMeta}>One moment while we check your admin session.</Text>
+          </Card>
+        ) : null}
+
+        {authReady && !authUser?.isAdmin ? (
+          <Card>
+            <Text style={styles.sectionTitle}>Admin Login Required</Text>
+            <Text style={styles.sectionMeta}>Use a legacy Pasban admin account to update status controls and Islamic calendar month lengths.</Text>
+            <Link href="/login" asChild>
+              <Pressable style={styles.loginButton}>
+                <Text style={styles.loginButtonText}>Login</Text>
+              </Pressable>
+            </Link>
+          </Card>
+        ) : null}
+
+        {authUser?.isAdmin ? (
+          <Card>
+            <View style={styles.signedInRow}>
+              <View style={styles.signedInCopy}>
+                <Text style={styles.sectionTitle}>Signed In</Text>
+                <Text style={styles.sectionMeta}>{authUser.displayName} / {authUser.adminType || 'Admin'}</Text>
+              </View>
+              <Pressable onPress={logout} style={styles.logoutButton}>
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </Pressable>
+            </View>
+          </Card>
+        ) : null}
+
+        {authUser?.isAdmin ? (
+          <>
         <Card>
           <Text style={styles.sectionTitle}>Majlis Status</Text>
           <Text style={styles.sectionMeta}>Open community controls for today's Anjuman schedule.</Text>
@@ -129,6 +178,8 @@ export default function AdminScreen() {
 
           {calendarNotice ? <Text style={styles.calendarNotice}>{calendarNotice}</Text> : null}
         </Card>
+          </>
+        ) : null}
       </View>
     </AppShell>
   );
@@ -147,6 +198,49 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 21,
     marginTop: spacing.xs,
+  },
+  loginButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    borderRadius: 6,
+    borderWidth: 1,
+    minHeight: 42,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  loginButtonText: {
+    color: colors.night,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  signedInRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  signedInCopy: {
+    flex: 1,
+    minWidth: 220,
+  },
+  logoutButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  logoutButtonText: {
+    color: colors.ink,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
   name: {
     color: colors.ink,

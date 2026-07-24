@@ -45,6 +45,7 @@
     "serve": "node app.js",
     "db:migrate": "node api/scripts/migrate.js",
     "firebase:import": "node api/scripts/import-firestore.js",
+    "firebase:import-users": "node api/scripts/import-firebase-auth-users.js",
     "verify:api": "node api/scripts/verify-api.js"
   },
   "private": true

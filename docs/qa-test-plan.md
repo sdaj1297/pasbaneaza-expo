@@ -185,6 +185,8 @@ Pass:
 
 Test:
 
+- Open `/login`.
+- Sign in with a legacy Pasban admin email/password.
 - Open `/admin`.
 - Change an event status to Pending, En Route, Started, Completed, Delayed, and Skipped.
 - Refresh `/admin`.
@@ -192,6 +194,8 @@ Test:
 
 Pass:
 
+- Legacy admin login succeeds.
+- Non-admin users cannot access admin controls.
 - Status updates save.
 - Public status page reflects the update.
 - No page crashes after repeated updates.

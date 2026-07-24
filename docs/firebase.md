@@ -116,7 +116,34 @@ For beta:
 - Public users can create form submissions.
 - Public users cannot directly create/edit/delete events or banners.
 
-When admin auth is added, we should replace the protected `write: if false` branches with admin custom claims.
+Admin-only writes should use Firebase Auth custom claims. The beta import script sets `admin: true` for legacy admins.
+
+## Legacy Admin Login
+
+The legacy production site stores admin users in `SYS_USERS` and verifies `SYS_USERS.ADMIN_CODE` with PHP `password_verify`.
+
+For the Firebase beta, import those users into Firebase Authentication so they can sign in with the same email/password:
+
+1. In Firebase Console, enable Authentication -> Sign-in method -> Email/Password.
+2. Point local `.env` or command environment variables at the cloned legacy MySQL database.
+3. Set `FIREBASE_PROJECT_ID`.
+4. Set `GOOGLE_APPLICATION_CREDENTIALS` to the Firebase service-account JSON.
+5. Run:
+
+```bash
+npm run firebase:import-users
+```
+
+The import script:
+
+- Reads `SYS_USERS`.
+- Imports the existing bcrypt password hashes into Firebase Auth.
+- Sets custom claims:
+  - `admin: true|false`
+  - `adminType`
+  - `legacyUserId`
+
+The Expo app uses Firebase Auth for `/login`. Admin-only Firestore writes should check `request.auth.token.admin == true`.
 
 ## Importing From Legacy MySQL
 

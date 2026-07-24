@@ -26,6 +26,7 @@ export default function TabLayout() {
         <Stack.Screen name="prayer" options={{ title: 'Prayer' }} />
         <Stack.Screen name="status" options={{ title: 'Status' }} />
         <Stack.Screen name="connect" options={{ title: 'Connect' }} />
+        <Stack.Screen name="login" options={{ title: 'Login' }} />
         <Stack.Screen name="admin" options={{ title: 'Admin' }} />
       </Stack>
     );
@@ -60,6 +61,7 @@ export default function TabLayout() {
       <Tabs.Screen name="prayer" options={{ title: 'Prayer', tabBarLabel: 'Prayer', tabBarIcon: tabIcon('P') }} />
       <Tabs.Screen name="status" options={{ title: 'Status', tabBarLabel: 'Status', tabBarIcon: tabIcon('S') }} />
       <Tabs.Screen name="connect" options={{ title: 'Connect', tabBarLabel: 'Connect', tabBarIcon: tabIcon('N') }} />
+      <Tabs.Screen name="login" options={{ href: null }} />
       <Tabs.Screen name="admin" options={{ href: null }} />
     </Tabs>
   );
