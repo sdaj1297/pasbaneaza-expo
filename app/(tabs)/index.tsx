@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Stack } from 'expo-router';
-import { Image, Linking, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
 import { HomeScheduleBoard, HomeScheduleFilter } from '@/components/HomeScheduleBoard';
@@ -26,8 +26,6 @@ const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eve
 };
 
 export default function HomeScreen() {
-  const { width } = useWindowDimensions();
-  const isWide = width >= 900;
   const [audience, setAudience] = useState<HomeScheduleFilter>('anjuman');
   const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(fallbackEvents);
   const [allEvents, setAllEvents] = useState<CommunityEvent[]>(fallbackEvents);
@@ -89,12 +87,12 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={[styles.primaryGrid, isWide && styles.primaryGridWide]}>
+        <View style={styles.primaryGrid}>
           <View style={styles.schedulePane}>
             <HomeScheduleBoard activeFilter={audience} events={scheduleEvents} onFilterChange={setAudience} />
           </View>
 
-          <View style={[styles.sideRail, isWide && styles.sideRailWide]}>
+          <View style={styles.sideRail}>
             <NextProgramCard event={nextAnjuman} />
             <MetricStrip todayCount={todayEvents.length} anjumanCount={anjumanCount} communityCount={communityCount} />
             {featured.isActive ? <FeaturedFlyer event={featured} /> : null}
@@ -102,7 +100,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={[styles.lowerGrid, isWide && styles.lowerGridWide]}>
+        <View style={styles.lowerGrid}>
           <View style={styles.broadcastCard}>
             <Text style={styles.kicker}>Broadcast</Text>
             <Text style={styles.sectionHeading}>Pasban-e-Aza Live</Text>
@@ -113,9 +111,9 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.connectCard}>
-            <Text style={styles.kicker}>Stay current</Text>
-            <Text style={styles.sectionHeading}>Reminders, membership, and volunteering</Text>
-            <Text style={styles.mutedText}>Sign up flows will connect to the API-backed forms as the beta hardens.</Text>
+            <Text style={[styles.kicker, styles.onDarkKicker]}>Stay current</Text>
+            <Text style={[styles.sectionHeading, styles.onDarkText]}>Reminders, membership, and volunteering</Text>
+            <Text style={[styles.mutedText, styles.onDarkMuted]}>Sign up flows will connect to the API-backed forms as the beta hardens.</Text>
             <View style={styles.socialStack}>
               {socialLinks.map((link) => (
                 <Pressable key={link.label} onPress={() => Linking.openURL(link.url)} style={styles.socialButton}>
@@ -225,7 +223,8 @@ function dedupeEvents(events: CommunityEvent[]) {
 
 const styles = StyleSheet.create({
   intro: {
-    borderBottomColor: colors.nightLine,
+    backgroundColor: colors.paper,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     gap: spacing.md,
     marginBottom: spacing.lg,
@@ -235,13 +234,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   kicker: {
-    color: colors.gold,
+    color: colors.red,
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   introText: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.body,
     fontWeight: '700',
     lineHeight: 22,
@@ -253,8 +252,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   datePill: {
-    backgroundColor: colors.nightCard,
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.sm,
     borderWidth: 1,
     minWidth: 156,
@@ -262,66 +261,66 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   pillLabel: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   pillValue: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.lead,
     fontWeight: '900',
     marginTop: 2,
   },
   primaryGrid: {
-    gap: spacing.md,
-  },
-  primaryGridWide: {
     alignItems: 'flex-start',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   schedulePane: {
+    flexBasis: 640,
     flex: 1,
     minWidth: 0,
   },
   sideRail: {
+    flexBasis: 320,
+    flexGrow: 1,
+    flexShrink: 1,
     gap: spacing.md,
   },
-  sideRailWide: {
-    width: 340,
-  },
   sideCard: {
-    backgroundColor: colors.nightCard,
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
   },
   nextTime: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 28,
     fontWeight: '900',
     marginTop: spacing.xs,
   },
   nextContact: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.lead,
     fontWeight: '900',
   },
   mutedText: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.body,
     lineHeight: 22,
   },
   locationText: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.body,
     fontWeight: '700',
   },
   metricStrip: {
-    backgroundColor: colors.nightCard,
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',
@@ -329,18 +328,18 @@ const styles = StyleSheet.create({
   },
   metric: {
     alignItems: 'center',
-    borderRightColor: colors.nightLine,
+    borderRightColor: colors.border,
     borderRightWidth: 1,
     flex: 1,
     padding: spacing.md,
   },
   metricValue: {
-    color: colors.gold,
+    color: colors.red,
     fontSize: 26,
     fontWeight: '900',
   },
   metricLabel: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.label,
     fontWeight: '900',
     marginTop: spacing.xs,
@@ -352,7 +351,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   flyerTitle: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.title,
     fontWeight: '900',
     lineHeight: 30,
@@ -363,36 +362,36 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   prayerItem: {
-    backgroundColor: colors.nightRaised,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radii.sm,
     minWidth: 118,
     padding: spacing.sm,
   },
   prayerLabel: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.small,
     fontWeight: '700',
   },
   prayerTime: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.lead,
     fontWeight: '900',
     marginTop: 2,
   },
   lowerGrid: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
     marginTop: spacing.lg,
   },
-  lowerGridWide: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-  },
   broadcastCard: {
-    backgroundColor: colors.nightCard,
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     flex: 1,
+    flexBasis: 620,
     minWidth: 0,
     padding: spacing.md,
   },
@@ -401,11 +400,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, .18)',
     borderRadius: radii.md,
     borderWidth: 1,
+    flexBasis: 320,
+    flexGrow: 1,
+    flexShrink: 1,
     gap: spacing.sm,
     padding: spacing.md,
   },
   sectionHeading: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.title,
     fontWeight: '900',
     lineHeight: 30,
@@ -425,7 +427,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   socialLabel: {
-    color: colors.text,
+    color: colors.ivory,
     fontSize: typography.lead,
     fontWeight: '900',
   },
@@ -433,5 +435,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 250, 240, .72)',
     fontSize: typography.small,
     marginTop: 2,
+  },
+  onDarkKicker: {
+    color: colors.gold,
+  },
+  onDarkText: {
+    color: colors.ivory,
+  },
+  onDarkMuted: {
+    color: 'rgba(255, 250, 240, .75)',
   },
 });

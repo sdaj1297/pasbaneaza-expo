@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { ColorValue, Text } from 'react-native';
+import { ColorValue, Platform, Text } from 'react-native';
 
 import { colors } from '@/constants/theme';
 
@@ -17,20 +17,25 @@ function TextIcon({ color, label }: { color: ColorValue; label: string }) {
 }
 
 export default function TabLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.gold,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.nightCard,
-          borderTopColor: colors.nightLine,
+  const tabBarStyle =
+    Platform.OS === 'web'
+      ? ({ display: 'none' } as const)
+      : {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           height: 76,
           minHeight: 76,
           paddingBottom: 12,
           paddingTop: 8,
-        },
+        };
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.red,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '900',

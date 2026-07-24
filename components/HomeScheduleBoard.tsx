@@ -92,7 +92,7 @@ function ScheduleRow({ event }: { event: CommunityEvent }) {
 
         <View style={styles.actions}>
           <Pressable onPress={openMaps} disabled={!event.address} style={styles.textButton}>
-            <Text style={[styles.textButtonLabel, !event.address && styles.disabledText]}>Map</Text>
+            <Text style={[styles.textButtonLabel, !event.address && styles.disabledText]}>Maps</Text>
           </Pressable>
         </View>
       </View>
@@ -102,8 +102,8 @@ function ScheduleRow({ event }: { event: CommunityEvent }) {
 
 const styles = StyleSheet.create({
   board: {
-    backgroundColor: colors.nightCard,
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     overflow: 'hidden',
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   heading: {
-    color: colors.text,
+    color: colors.ivory,
     fontSize: typography.display,
     fontWeight: '900',
     lineHeight: 39,
@@ -127,7 +127,8 @@ const styles = StyleSheet.create({
     maxWidth: 620,
   },
   filters: {
-    borderBottomColor: colors.nightLine,
+    backgroundColor: colors.surfaceAlt,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -135,7 +136,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   filter: {
-    borderColor: colors.nightLine,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     minHeight: 40,
@@ -147,38 +149,45 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
   },
   filterText: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   activeFilterText: {
-    color: colors.text,
+    color: colors.ivory,
   },
   list: {
-    backgroundColor: colors.nightCard,
+    backgroundColor: colors.surface,
   },
   row: {
-    borderBottomColor: colors.nightLine,
+    alignItems: 'flex-start',
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
     padding: spacing.lg,
   },
   timeColumn: {
     gap: spacing.xs,
+    width: 118,
   },
   time: {
-    color: colors.gold,
+    color: colors.red,
     fontSize: typography.title,
     fontWeight: '900',
   },
   date: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.small,
     fontWeight: '700',
   },
   eventColumn: {
+    flexBasis: 260,
+    flex: 1,
     gap: spacing.xs,
+    minWidth: 0,
   },
   badgeRow: {
     alignItems: 'center',
@@ -195,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(217, 173, 67, .18)',
   },
   communityBadge: {
-    borderColor: colors.nightLine,
+    borderColor: colors.border,
     borderWidth: 1,
   },
   badgeText: {
@@ -204,32 +213,32 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   anjumanBadgeText: {
-    color: colors.gold,
+    color: colors.red,
   },
   communityBadgeText: {
-    color: colors.textMuted,
+    color: colors.muted,
   },
   audience: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   contact: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.title,
     fontWeight: '900',
     lineHeight: 30,
     marginTop: spacing.xs,
   },
   title: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.body,
     fontWeight: '700',
     lineHeight: 22,
   },
   location: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.body,
     lineHeight: 22,
   },
@@ -238,13 +247,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
     marginTop: spacing.xs,
+    justifyContent: 'flex-end',
   },
   textButton: {
     minHeight: 36,
     justifyContent: 'center',
   },
   textButtonLabel: {
-    color: colors.gold,
+    color: colors.red,
     fontSize: typography.body,
     fontWeight: '900',
     textDecorationLine: 'underline',
@@ -257,13 +267,13 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   emptyTitle: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: typography.lead,
     fontWeight: '900',
     textAlign: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
+    color: colors.muted,
     fontSize: typography.body,
     marginTop: spacing.xs,
     textAlign: 'center',
