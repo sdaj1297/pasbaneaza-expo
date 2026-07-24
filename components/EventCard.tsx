@@ -11,26 +11,30 @@ type EventCardProps = {
 
 export function EventCard({ event, showScheduleMark = true }: EventCardProps) {
   const openMaps = () => {
+    if (!event.address) return;
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`);
   };
   const dateLabel = event.islamicDate || event.date;
+  const title = event.title || 'Majlis';
 
   return (
     <Card>
       <View style={styles.topRow}>
         <View style={styles.datePill}>
-          <Text style={styles.dateTime}>{event.time}</Text>
-          <Text style={styles.dateText}>{dateLabel}</Text>
+          <Text style={styles.dateTime}>{event.time || 'TBA'}</Text>
+          <Text style={styles.dateText}>{dateLabel || 'Date pending'}</Text>
         </View>
         {showScheduleMark && event.isAnjumanSchedule ? <Text style={styles.mark}>Anjuman Schedule</Text> : null}
       </View>
 
-      <Text style={styles.title}>{event.title}</Text>
-      <Text style={styles.contact}>{event.contactName}</Text>
-      <Text style={styles.meta}>{event.locationName}</Text>
-      <Pressable onPress={openMaps}>
-        <Text style={styles.address}>{event.address}</Text>
-      </Pressable>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.contact}>{event.contactName || title}</Text>
+      <Text style={styles.meta}>{event.locationName || 'Location pending'}</Text>
+      {event.address ? (
+        <Pressable onPress={openMaps}>
+          <Text style={styles.address}>{event.address}</Text>
+        </Pressable>
+      ) : null}
     </Card>
   );
 }

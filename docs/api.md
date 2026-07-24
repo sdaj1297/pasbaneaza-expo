@@ -198,7 +198,7 @@ Currently returns static Houston placeholder times. This must be replaced with e
 
 `POST /forms/:type`
 
-Allowed types: `contact`, `reminder`, `membership`, `volunteer`.
+Allowed types: `contact`, `event`, `reminder`, `membership`, `volunteer`.
 
 Body:
 
@@ -214,3 +214,5 @@ Body:
 ```
 
 Returns a submission id and status. These submissions are stored in `app_form_submissions`.
+
+Public event submissions use `type=event`, include event details in `payload`, and return `status=pending_review`. They must not appear on public event/calendar/status screens until reviewed and approved.

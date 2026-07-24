@@ -58,6 +58,8 @@ submissions/{submissionId}
 
 `submissions` is write-only from the public app.
 
+Event submissions are stored as `type: "event"` with `status: "pending_review"`. They are review queue records only; they are not written into `events` or `eventDays` until approved by an admin workflow.
+
 ## Event Document Shape
 
 ```json

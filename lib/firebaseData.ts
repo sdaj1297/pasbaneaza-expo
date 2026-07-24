@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -38,6 +39,7 @@ import {
 import type { DocumentData } from 'firebase/firestore';
 import type { HomePayload } from '@/lib/api';
 import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
+import type { PublicSubmissionInput, PublicSubmissionResult } from '@/lib/api';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
@@ -265,6 +267,35 @@ export async function fetchPrayerTimesFromFirebase(): Promise<PrayerTime[]> {
     console.warn('Falling back to mock prayer times after Firestore read failed.', error);
     return fallbackPrayerTimes;
   }
+}
+
+export async function submitPublicFormToFirebase(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
+  if (!isFirebaseBackendEnabled()) {
+    return {
+      id: `local-${Date.now()}`,
+      type: input.type,
+      status: input.type === 'event' ? 'pending_review' : 'new',
+    };
+  }
+
+  const db = getFirebaseDb();
+  const docRef = await addDoc(collection(db, 'submissions'), {
+    type: input.type,
+    name: input.name || '',
+    email: input.email || '',
+    phone: input.phone || '',
+    message: input.message || '',
+    payload: input.payload || {},
+    source: input.source || 'website',
+    status: input.type === 'event' ? 'pending_review' : 'new',
+    createdAt: serverTimestamp(),
+  });
+
+  return {
+    id: docRef.id,
+    type: input.type,
+    status: input.type === 'event' ? 'pending_review' : 'new',
+  };
 }
 
 async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]> {

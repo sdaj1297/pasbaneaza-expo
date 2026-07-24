@@ -91,10 +91,28 @@ service cloud.firestore {
           "message",
           "payload",
           "source",
+          "status",
           "createdAt"
         ])
         && request.resource.data.createdAt == request.time
-        && request.resource.data.source == "website";
+        && request.resource.data.source == "website"
+        && request.resource.data.type in [
+          "contact",
+          "event",
+          "reminder",
+          "membership",
+          "volunteer"
+        ]
+        && (
+          (
+            request.resource.data.type == "event"
+            && request.resource.data.status == "pending_review"
+          )
+          || (
+            request.resource.data.type != "event"
+            && request.resource.data.status == "new"
+          )
+        );
 
       allow read, update, delete: if false;
     }

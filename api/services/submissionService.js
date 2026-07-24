@@ -1,7 +1,7 @@
 const { pool } = require('../db');
 const { cleanText } = require('../utils/text');
 
-const allowedSubmissionTypes = new Set(['contact', 'reminder', 'membership', 'volunteer']);
+const allowedSubmissionTypes = new Set(['contact', 'event', 'reminder', 'membership', 'volunteer']);
 
 function normalizeSubmissionInput(input) {
   const type = cleanText(input.type).toLowerCase();
@@ -30,6 +30,7 @@ function normalizeSubmissionInput(input) {
     message: message || null,
     payloadJson: JSON.stringify(input.payload || {}),
     source: cleanText(input.source || 'website').slice(0, 64) || 'website',
+    status: type === 'event' ? 'pending_review' : 'new',
   };
 }
 
@@ -37,16 +38,16 @@ async function createSubmission(input, db = pool) {
   const submission = normalizeSubmissionInput(input);
   const [result] = await db.query(
     `insert into app_form_submissions
-       (submission_type, name, email, phone, message, payload_json, source)
+       (submission_type, name, email, phone, message, payload_json, source, status)
      values
-       (:type, :name, :email, :phone, :message, :payloadJson, :source)`,
+       (:type, :name, :email, :phone, :message, :payloadJson, :source, :status)`,
     submission,
   );
 
   return {
     id: String(result.insertId),
     type: submission.type,
-    status: 'new',
+    status: submission.status,
   };
 }
 

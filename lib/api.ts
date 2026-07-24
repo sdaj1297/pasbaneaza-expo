@@ -28,6 +28,7 @@ import {
   fetchPrayerTimesFromFirebase,
   fetchTodayMajlisFromFirebase,
   isFirebaseBackendEnabled,
+  submitPublicFormToFirebase,
   updateIslamicMonthLengthInFirebase,
   updateMajlisStatusInFirebase,
 } from '@/lib/firebaseData';
@@ -79,6 +80,24 @@ export type HomePayload = {
   sayings: { id: string; who: string; saying: string }[];
   prayerTimes: PrayerTime[];
   upcomingEvents: CommunityEvent[];
+};
+
+export type PublicSubmissionType = 'contact' | 'event' | 'reminder' | 'membership' | 'volunteer';
+
+export type PublicSubmissionInput = {
+  type: PublicSubmissionType;
+  name?: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+  payload?: Record<string, unknown>;
+  source?: string;
+};
+
+export type PublicSubmissionResult = {
+  id: string;
+  type: PublicSubmissionType;
+  status: 'new' | 'pending_review' | string;
 };
 
 const fallbackHome: HomePayload = {
@@ -194,6 +213,18 @@ export async function updateIslamicMonthLength(year: number, month: number, leng
     'PATCH',
   );
   return result.year;
+}
+
+export async function submitPublicForm(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
+  if (isFirebaseBackendEnabled()) return submitPublicFormToFirebase(input);
+
+  const fallback: PublicSubmissionResult = {
+    id: `local-${Date.now()}`,
+    type: input.type,
+    status: input.type === 'event' ? 'pending_review' : 'new',
+  };
+  const result = await sendJson<{ submission: PublicSubmissionResult }>(`/forms/${input.type}`, input, { submission: fallback });
+  return result.submission;
 }
 
 function matchesFilter(event: CommunityEvent, filter: CalendarFilter) {

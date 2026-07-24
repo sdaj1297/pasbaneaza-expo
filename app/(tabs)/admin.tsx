@@ -62,10 +62,17 @@ export default function AdminScreen() {
           <Text style={styles.sectionMeta}>Open community controls for today's Anjuman schedule.</Text>
         </Card>
 
+        {!items.length ? (
+          <Card>
+            <Text style={styles.name}>No Anjuman majalis today</Text>
+            <Text style={styles.meta}>Status controls will appear automatically when today has committed Anjuman schedule events.</Text>
+          </Card>
+        ) : null}
+
         {items.map((item) => (
           <Card key={item.id}>
-            <Text style={styles.name}>{item.contactName}</Text>
-            <Text style={styles.meta}>{item.time} - {item.title}</Text>
+            <Text style={styles.name}>{item.contactName || item.title || 'Majlis'}</Text>
+            <Text style={styles.meta}>{item.time || 'TBA'} - {item.title || 'Program details pending'}</Text>
             <View style={styles.buttons}>
               {statuses.map((status) => (
                 <Pressable key={status} onPress={() => setStatus(item, status)} style={[styles.button, item.status === status && styles.activeButton]}>

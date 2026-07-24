@@ -20,11 +20,19 @@ export default function StatusScreen() {
     <AppShell title="Majlis Status" subtitle={`${todayLabel} / ${islamicTodayLabel}`} compact>
       <Card>
         <Text style={styles.kicker}>Current Status</Text>
-        <Text style={styles.current}>{current.contactName} - {current.status}{current.stage ? ` - ${current.stage}` : ''}</Text>
+        <Text style={styles.current}>
+          {current ? `${current.contactName || current.title || 'Majlis'} - ${current.status}${current.stage ? ` - ${current.stage}` : ''}` : 'No Anjuman majalis listed for today'}
+        </Text>
         <Text style={styles.progress}>{completed} / {items.length} majalis completed</Text>
       </Card>
 
       <View style={styles.stack}>
+        {!items.length ? (
+          <Card>
+            <Text style={styles.emptyTitle}>No status board for today.</Text>
+            <Text style={styles.emptyText}>When there are Anjuman schedule majalis today, they will appear here automatically.</Text>
+          </Card>
+        ) : null}
         {items.map((item, index) => (
           <Card key={item.id}>
             <View style={styles.statusRow}>
@@ -32,12 +40,14 @@ export default function StatusScreen() {
                 <Text style={styles.numText}>{index + 1}</Text>
               </View>
               <View style={styles.info}>
-                <Text style={styles.time}>{item.time}</Text>
-                <Text style={styles.name}>{item.contactName}</Text>
-                <Text style={styles.title}>{item.title}</Text>
-                <Pressable onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address)}`)}>
-                  <Text style={styles.address}>{item.address}</Text>
-                </Pressable>
+                <Text style={styles.time}>{item.time || 'TBA'}</Text>
+                <Text style={styles.name}>{item.contactName || item.title || 'Majlis'}</Text>
+                <Text style={styles.title}>{item.title || 'Program details pending'}</Text>
+                {item.address ? (
+                  <Pressable onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address)}`)}>
+                    <Text style={styles.address}>{item.address}</Text>
+                  </Pressable>
+                ) : null}
                 <Text style={[styles.badge, item.status === 'Started' && styles.started]}>{item.status}</Text>
                 {item.stage ? <Text style={styles.stage}>Current Stage: {item.stage}</Text> : null}
               </View>
@@ -124,6 +134,16 @@ const styles = StyleSheet.create({
   stage: {
     color: colors.goldDark,
     fontWeight: '800',
+    marginTop: spacing.xs,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  emptyText: {
+    color: colors.muted,
+    lineHeight: 22,
     marginTop: spacing.xs,
   },
 });

@@ -81,6 +81,23 @@ async function verify() {
     assert.equal(submission.type, 'volunteer');
     assert.equal(submission.status, 'new');
 
+    const eventSubmission = await createSubmission(
+      {
+        type: 'event',
+        name: 'Verification User',
+        email: 'verify@example.com',
+        message: 'Test event submission',
+        payload: {
+          eventTitle: 'Verification Majlis',
+          eventDate: '2026-08-01',
+        },
+        source: 'verify-api',
+      },
+      connection,
+    );
+    assert.equal(eventSubmission.type, 'event');
+    assert.equal(eventSubmission.status, 'pending_review');
+
     const originalYear = await getIslamicCalendarYear(1448, connection);
     const originalMuharram = originalYear.months.find((month) => month.index === 1).length;
     const adjustedLength = originalMuharram === 30 ? 29 : 30;
@@ -108,6 +125,7 @@ async function verify() {
       'islamic-month-length-update',
       'majlis-status-sql-update',
       'form-submission-sql-insert',
+      'event-submission-pending-review',
     ],
   };
 }

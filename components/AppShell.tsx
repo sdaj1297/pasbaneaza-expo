@@ -18,6 +18,7 @@ const navItems = [
   { href: '/prayer', label: 'Prayer' },
   { href: '/status', label: 'Status' },
   { href: '/connect', label: 'Connect' },
+  { href: '/admin', label: 'Login' },
 ] as const;
 
 export function AppShell({ title, subtitle, compact = false, children }: AppShellProps) {
