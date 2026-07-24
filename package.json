@@ -1,6 +1,6 @@
 {
   "name": "pasbaneaza-expo",
-  "main": "expo-router/entry",
+  "main": "app.js",
   "version": "1.0.0",
   "dependencies": {
     "cors": "^2.8.6",
@@ -31,7 +31,8 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node app.js",
+    "dev": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
