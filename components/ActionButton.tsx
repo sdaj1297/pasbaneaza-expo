@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 250, 240, .45)',
   },
   text: {
-    color: colors.ink,
+    color: colors.night,
     fontSize: 14,
     fontWeight: '900',
     textTransform: 'uppercase',

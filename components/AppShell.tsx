@@ -27,7 +27,7 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, compact && styles.compactContent]}>
       <View style={styles.header}>
         <View style={styles.brandRow}>
-          <Image source={require('@/assets/images/pasban-logo-black.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
           <View style={styles.brandCopy}>
             <Text style={styles.brandTitle}>Anjuman Pasban-e-Aza</Text>
             <Text style={styles.brandSubtitle}>Houston, TX</Text>
