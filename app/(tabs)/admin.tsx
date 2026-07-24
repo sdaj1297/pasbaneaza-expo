@@ -30,8 +30,8 @@ import {
   SelectOption,
 } from '@/lib/eventFormOptions';
 import { AuthUser, logout, subscribeToAuthState } from '@/lib/auth';
+import { majlisStages, majlisStatuses, stageForStatus } from '@/lib/majlisStatus';
 
-const statuses: MajlisStatus[] = ['Pending', 'En Route', 'Started', 'Completed', 'Delayed', 'Skipped'];
 const adminSections = ['Events', 'Status', 'Calendar'] as const;
 const yesNoOptions: SelectOption[] = [
   { label: 'Yes', value: 'yes' },
@@ -111,9 +111,17 @@ export default function AdminScreen() {
   };
 
   const setStatus = async (item: StatusItem, status: MajlisStatus) => {
-    const stage = status === 'Started' ? item.stage || 'Hadis e Kisa' : undefined;
+    const stage = stageForStatus(status, item.stage);
     setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, status, stage } : currentItem));
     const updatedItems = await updateMajlisStatus(item.id, item.date, status, stage);
+    setItems(updatedItems);
+  };
+
+  const setStage = async (item: StatusItem, stage: string) => {
+    setItems((current) => current.map((currentItem) => currentItem.id === item.id
+      ? { ...currentItem, status: 'Started', stage }
+      : currentItem));
+    const updatedItems = await updateMajlisStatus(item.id, item.date, 'Started', stage);
     setItems(updatedItems);
   };
 
@@ -327,13 +335,31 @@ export default function AdminScreen() {
                     <Text style={styles.name}>{item.contactName || item.title || 'Majlis'}</Text>
                     <Text style={styles.meta}>{item.time || 'TBA'} / {item.title || 'Program details pending'}</Text>
                     <View style={styles.buttons}>
-                      {statuses.map((status) => (
-                        <Pressable key={status} onPress={() => setStatus(item, status)} style={[styles.button, item.status === status && styles.activeButton]}>
+                      {majlisStatuses.map((status) => (
+                        <Pressable accessibilityRole="button" key={status} onPress={() => setStatus(item, status)} style={[styles.button, item.status === status && styles.activeButton]}>
                           <Text style={[styles.buttonText, item.status === status && styles.activeButtonText]}>{status}</Text>
                         </Pressable>
                       ))}
                     </View>
-                    {item.stage ? <Text style={styles.stage}>Stage: {item.stage}</Text> : null}
+                    {item.status === 'Started' ? (
+                      <View style={styles.adminStagePanel}>
+                        <Text style={styles.stage}>Current stage</Text>
+                        <View style={styles.buttons}>
+                          {majlisStages.map((stage) => (
+                            <Pressable
+                              accessibilityRole="button"
+                              key={stage}
+                              onPress={() => setStage(item, stage)}
+                              style={[styles.stageButton, item.stage === stage && styles.activeStageButton]}
+                            >
+                              <Text style={[styles.stageButtonText, item.stage === stage && styles.activeStageButtonText]}>
+                                {stage}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
                   </Card>
                 ))}
               </>
@@ -876,9 +902,36 @@ const styles = StyleSheet.create({
   },
   stage: {
     color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  adminStagePanel: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+  },
+  stageButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  activeStageButton: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  stageButtonText: {
+    color: colors.muted,
     fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
-    marginTop: spacing.sm,
+  },
+  activeStageButtonText: {
+    color: colors.onIvory,
   },
   yearRow: {
     flexDirection: 'row',

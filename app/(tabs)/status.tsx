@@ -16,23 +16,52 @@ import {
   MajlisStatus,
   statusItems as fallbackStatusItems,
   StatusItem,
-  todayLabel,
 } from '@/data/mock';
-import { fetchTodayMajlis } from '@/lib/api';
+import { fetchTodayMajlis, updateMajlisStatus } from '@/lib/api';
+import { getHoustonDate } from '@/lib/calendarUtils';
+import { majlisStages, majlisStatuses, stageForStatus } from '@/lib/majlisStatus';
 
 export default function StatusScreen() {
   const [items, setItems] = useState<StatusItem[]>(fallbackStatusItems);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const [updateError, setUpdateError] = useState('');
   const completed = items.filter((item) => item.status === 'Completed').length;
   const current = items.find((item) => item.status === 'Started' || item.status === 'En Route');
   const next = items.find((item) => item.status === 'Pending' || item.status === 'Delayed');
   const percent = items.length ? Math.round((completed / items.length) * 100) : 0;
+  const statusDate = items[0]?.date || getHoustonDate();
+  const statusDateLabel = formatStatusDate(statusDate);
+  const statusIslamicDateLabel = items[0]?.islamicDate || islamicTodayLabel;
+  const routeCountLabel = items.length === 1 ? '1 scheduled stop' : `${items.length} scheduled stops`;
 
   useEffect(() => {
     fetchTodayMajlis().then(setItems);
   }, []);
 
+  const saveUpdate = async (
+    item: StatusItem,
+    status: MajlisStatus,
+    stage = stageForStatus(status, item.stage),
+  ) => {
+    setBusyItemId(item.id);
+    setNotice('');
+    setUpdateError('');
+
+    try {
+      const updatedItems = await updateMajlisStatus(item.id, item.date, status, stage);
+      setItems(updatedItems);
+      setNotice(`${item.contactName || item.title || 'Majlis'} updated to ${stage || status}.`);
+    } catch {
+      setUpdateError('The status could not be updated. Please try again.');
+      setItems(await fetchTodayMajlis());
+    } finally {
+      setBusyItemId(null);
+    }
+  };
+
   return (
-    <AppShell title="Live Majlis Status" subtitle={`${todayLabel} · ${islamicTodayLabel}`} compact>
+    <AppShell title="Live Majlis Status" subtitle={`${statusDateLabel} · ${statusIslamicDateLabel}`} compact>
       <View style={styles.liveSummary}>
         <View style={styles.liveHeading}>
           <View style={styles.liveLabelRow}>
@@ -75,9 +104,20 @@ export default function StatusScreen() {
         </View>
       </View>
 
+      <View style={styles.communityNotice}>
+        <View style={styles.communityNoticeCopy}>
+          <Text style={styles.communityNoticeTitle}>Community updates are open</Text>
+          <Text style={styles.communityNoticeText}>
+            Anyone at the majlis can keep the route current. Choose the correct stop and status below.
+          </Text>
+        </View>
+        {notice ? <Text style={styles.successNotice}>{notice}</Text> : null}
+        {updateError ? <Text style={styles.errorNotice}>{updateError}</Text> : null}
+      </View>
+
       <View style={styles.routeHeading}>
         <Text style={styles.routeEyebrow}>Today’s route</Text>
-        <Text style={styles.routeTitle}>{items.length ? `${items.length} scheduled stops` : 'No scheduled stops'}</Text>
+        <Text style={styles.routeTitle}>{items.length ? routeCountLabel : 'No scheduled stops'}</Text>
       </View>
 
       <View style={styles.timeline}>
@@ -87,6 +127,9 @@ export default function StatusScreen() {
             item={item}
             index={index}
             isLast={index === items.length - 1}
+            busy={busyItemId === item.id}
+            onStageChange={(stage) => saveUpdate(item, 'Started', stage)}
+            onStatusChange={(status) => saveUpdate(item, status)}
           />
         ))}
         {!items.length ? (
@@ -107,10 +150,16 @@ function TimelineItem({
   item,
   index,
   isLast,
+  busy,
+  onStageChange,
+  onStatusChange,
 }: {
   item: StatusItem;
   index: number;
   isLast: boolean;
+  busy: boolean;
+  onStageChange: (stage: string) => void;
+  onStatusChange: (status: MajlisStatus) => void;
 }) {
   const active = item.status === 'Started' || item.status === 'En Route';
   const completed = item.status === 'Completed';
@@ -159,6 +208,63 @@ function TimelineItem({
             <Text style={styles.addressText}>{item.address}</Text>
           </Pressable>
         ) : null}
+
+        <View style={styles.updatePanel}>
+          <View style={styles.updateHeading}>
+            <Text style={styles.updateTitle}>Update this stop</Text>
+            <Text style={styles.updateHint}>{busy ? 'Saving…' : 'Changes appear live for everyone'}</Text>
+          </View>
+          <View style={styles.controlRow}>
+            {majlisStatuses.map((status) => {
+              const selected = item.status === status;
+              return (
+                <Pressable
+                  accessibilityLabel={`Set ${item.contactName || item.title || 'majlis'} status to ${status}`}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  key={status}
+                  onPress={() => onStatusChange(status)}
+                  style={({ pressed }) => [
+                    styles.controlButton,
+                    selected && styles.activeControlButton,
+                    pressed && styles.pressedControl,
+                    busy && styles.disabledControl,
+                  ]}
+                >
+                  <Text style={[styles.controlButtonText, selected && styles.activeControlButtonText]}>{status}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {item.status === 'Started' ? (
+            <View style={styles.stageControls}>
+              <Text style={styles.stageControlsLabel}>Current stage</Text>
+              <View style={styles.controlRow}>
+                {majlisStages.map((stage) => {
+                  const selected = item.stage === stage;
+                  return (
+                    <Pressable
+                      accessibilityLabel={`Set ${item.contactName || item.title || 'majlis'} stage to ${stage}`}
+                      accessibilityRole="button"
+                      disabled={busy}
+                      key={stage}
+                      onPress={() => onStageChange(stage)}
+                      style={({ pressed }) => [
+                        styles.stageButton,
+                        selected && styles.activeStageButton,
+                        pressed && styles.pressedControl,
+                        busy && styles.disabledControl,
+                      ]}
+                    >
+                      <Text style={[styles.stageButtonText, selected && styles.activeStageButtonText]}>{stage}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -193,6 +299,16 @@ function statusColor(status: MajlisStatus) {
   if (status === 'En Route') return colors.blue;
   if (status === 'Delayed') return colors.red;
   return colors.muted;
+}
+
+function formatStatusDate(dateString: string) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12)).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+    year: 'numeric',
+  });
 }
 
 const styles = StyleSheet.create({
@@ -290,6 +406,47 @@ const styles = StyleSheet.create({
   progressFill: {
     backgroundColor: colors.gold,
     height: 3,
+  },
+  communityNotice: {
+    alignItems: 'flex-start',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  communityNoticeCopy: {
+    flex: 1,
+    minWidth: 260,
+  },
+  communityNoticeTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.body,
+  },
+  communityNoticeText: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
+    lineHeight: 20,
+    marginTop: 3,
+  },
+  successNotice: {
+    color: colors.green,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 20,
+    maxWidth: 360,
+  },
+  errorNotice: {
+    color: colors.red,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 20,
+    maxWidth: 360,
   },
   routeHeading: {
     paddingBottom: spacing.md,
@@ -455,6 +612,94 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typography.small,
     lineHeight: 19,
+  },
+  updatePanel: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+  },
+  updateHeading: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  updateTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  updateHint: {
+    color: colors.textSubtle,
+    fontFamily: fonts.body,
+    fontSize: typography.overline,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  controlButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
+  },
+  activeControlButton: {
+    backgroundColor: colors.oxbloodDeep,
+    borderColor: colors.oxbloodDeep,
+  },
+  controlButtonText: {
+    color: colors.muted,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.overline,
+  },
+  activeControlButtonText: {
+    color: colors.ivory,
+  },
+  stageControls: {
+    marginTop: spacing.md,
+  },
+  stageControlsLabel: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  stageButton: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    justifyContent: 'center',
+    minHeight: 34,
+    paddingHorizontal: spacing.xs,
+  },
+  activeStageButton: {
+    borderBottomColor: colors.gold,
+    borderBottomWidth: 2,
+  },
+  stageButtonText: {
+    color: colors.muted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
+  },
+  activeStageButtonText: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+  },
+  pressedControl: {
+    opacity: 0.72,
+  },
+  disabledControl: {
+    opacity: 0.5,
   },
   emptyState: {
     alignItems: 'center',

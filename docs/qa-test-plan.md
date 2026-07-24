@@ -173,12 +173,16 @@ Test:
 - Confirm it shows today's Houston Anjuman schedule.
 - Check event order.
 - Check status labels and current stage display.
+- While signed out, update a stop through each public status option.
+- Set a stop to Started and select each available stage.
 - Refresh the page.
 
 Pass:
 
 - Only today's Anjuman schedule appears.
 - Status data remains after refresh.
+- Public controls remain available without signing in.
+- Status and stage changes appear after refresh and on another device.
 - The current majlis/status area is understandable at a glance.
 
 ### 7. Admin Status Controls
