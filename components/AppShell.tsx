@@ -14,8 +14,10 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, compact && styles.compactContent]}>
       <View style={styles.header}>
         <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <View style={styles.brandCopy}>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
       </View>
       {children}
     </ScrollView>
@@ -25,11 +27,11 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.paper,
+    backgroundColor: colors.night,
   },
   content: {
     width: '100%',
-    maxWidth: 1040,
+    maxWidth: 1120,
     alignSelf: 'center',
     padding: spacing.md,
     paddingBottom: 96,
@@ -39,29 +41,30 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    backgroundColor: colors.night,
-    borderColor: 'rgba(217, 173, 67, .32)',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    paddingVertical: spacing.lg,
+    borderBottomColor: colors.nightLine,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
   },
   logo: {
-    width: 92,
-    height: 92,
-    marginBottom: spacing.sm,
+    height: 42,
+    width: 42,
+  },
+  brandCopy: {
+    flex: 1,
   },
   title: {
-    color: colors.ivory,
-    fontSize: 34,
+    color: colors.text,
+    fontSize: 20,
     fontWeight: '900',
-    textAlign: 'center',
   },
   subtitle: {
-    color: '#d7c9aa',
-    fontSize: 16,
-    marginTop: spacing.xs,
-    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
 });

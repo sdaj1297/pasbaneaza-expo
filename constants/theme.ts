@@ -14,18 +14,36 @@ export const colors = {
   charcoal: '#252525',
   night: '#060505',
   nightSoft: '#17110f',
+  nightCard: '#0d0b0b',
+  nightRaised: '#141111',
+  nightLine: '#2a2220',
+  text: '#fffaf0',
+  textMuted: '#b8ad9a',
+  textSubtle: '#7e756a',
+  oxblood: '#c83235',
   ivory: '#fffaf0',
 };
 
 export const spacing = {
+  xxs: 4,
   xs: 6,
   sm: 10,
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
 };
 
 export const radii = {
   sm: 6,
   md: 8,
+};
+
+export const typography = {
+  label: 11,
+  small: 13,
+  body: 15,
+  lead: 17,
+  title: 24,
+  display: 34,
 };
