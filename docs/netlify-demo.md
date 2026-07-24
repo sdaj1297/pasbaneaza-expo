@@ -55,6 +55,8 @@ PASBAN_DB_SSL_REJECT_UNAUTHORIZED=true
 
 If `EXPO_PUBLIC_DATA_BACKEND=firebase`, the Expo app reads Firestore directly. The SQL variables are only needed if we keep the Netlify Function API connected to a MySQL-compatible beta database.
 
+`netlify.toml` omits the `EXPO_PUBLIC_*` keys from Netlify secrets scanning because Expo public environment variables are intentionally bundled into the browser app. Do not add private server secrets to that omit list.
+
 Use the actual port required by the database provider. Some MySQL-compatible cloud databases use `3306`; TiDB Cloud often uses `4000`.
 
 If a provider requires IP allowlisting, remember that Netlify Functions do not give this project a simple fixed outbound IP on the normal plans. For a demo, choose a database provider that allows public TLS connections or lets you allow all IPs temporarily while keeping strong database credentials.
