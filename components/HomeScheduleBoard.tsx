@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { ArrowUpRight, MapPin, Plus } from 'lucide-react-native';
+import { ArrowUpRight, MapPin, Pencil, Plus } from 'lucide-react-native';
 import {
   Image,
   Linking,
@@ -26,11 +26,17 @@ const filterLabels: Record<HomeScheduleFilter, string> = {
 
 type HomeScheduleBoardProps = {
   activeFilter: HomeScheduleFilter;
+  canEdit?: boolean;
   events: CommunityEvent[];
   onFilterChange: (filter: HomeScheduleFilter) => void;
 };
 
-export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: HomeScheduleBoardProps) {
+export function HomeScheduleBoard({
+  activeFilter,
+  canEdit = false,
+  events,
+  onFilterChange,
+}: HomeScheduleBoardProps) {
   const width = useResponsiveWidth();
   const compact = width < 680;
 
@@ -76,6 +82,7 @@ export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: Home
           <ScheduleRow
             key={event.id}
             compact={compact}
+            canEdit={canEdit}
             event={event}
             isLast={index === Math.min(events.length, 8) - 1}
           />
@@ -101,10 +108,12 @@ export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: Home
 function ScheduleRow({
   event,
   compact,
+  canEdit,
   isLast,
 }: {
   event: CommunityEvent;
   compact: boolean;
+  canEdit: boolean;
   isLast: boolean;
 }) {
   const tone = getEventTone(event);
@@ -142,25 +151,38 @@ function ScheduleRow({
         ) : null}
       </View>
 
-      {event.isAnjumanSchedule ? (
-        <View style={styles.committedSeal}>
-          <Image
-            source={require('@/assets/images/pasban-logo-ui-black.png')}
-            style={styles.sealLogo}
-            resizeMode="contain"
-          />
-        </View>
-      ) : null}
+      <View style={[styles.rowActions, compact && styles.compactRowActions]}>
+        {event.isAnjumanSchedule ? (
+          <View style={styles.committedSeal}>
+            <Image
+              source={require('@/assets/images/pasban-logo-ui-black.png')}
+              style={styles.sealLogo}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
 
-      {!compact ? (
-        <Pressable disabled={!event.address} onPress={openMaps} style={styles.mapLink}>
-          <ArrowUpRight
-            color={event.address ? colors.oxblood : colors.onIvoryLine}
-            size={20}
-            strokeWidth={2}
-          />
-        </Pressable>
-      ) : null}
+        {canEdit ? (
+          <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
+            <Pressable
+              accessibilityLabel={`Edit ${event.contactName || event.title || 'event'}`}
+              style={styles.editButton}
+            >
+              <Pencil color={colors.oxblood} size={17} strokeWidth={2} />
+            </Pressable>
+          </Link>
+        ) : null}
+
+        {!compact ? (
+          <Pressable disabled={!event.address} onPress={openMaps} style={styles.mapLink}>
+            <ArrowUpRight
+              color={event.address ? colors.oxblood : colors.onIvoryLine}
+              size={20}
+              strokeWidth={2}
+            />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -372,6 +394,22 @@ const styles = StyleSheet.create({
   sealLogo: {
     height: 34,
     width: 34,
+  },
+  rowActions: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  compactRowActions: {
+    flexDirection: 'row',
+  },
+  editButton: {
+    alignItems: 'center',
+    borderColor: colors.onIvoryLine,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   mapLink: {
     alignItems: 'center',

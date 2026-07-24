@@ -1,4 +1,5 @@
-import { ArrowUpRight, MapPin } from 'lucide-react-native';
+import { Link } from 'expo-router';
+import { ArrowUpRight, MapPin, Pencil } from 'lucide-react-native';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, spacing, typography } from '@/constants/theme';
@@ -6,12 +7,18 @@ import { CommunityEvent } from '@/data/mock';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 type EventCardProps = {
+  canEdit?: boolean;
   event: CommunityEvent;
   showScheduleMark?: boolean;
   isLast?: boolean;
 };
 
-export function EventCard({ event, showScheduleMark = true, isLast = false }: EventCardProps) {
+export function EventCard({
+  canEdit = false,
+  event,
+  showScheduleMark = true,
+  isLast = false,
+}: EventCardProps) {
   const tone = getEventTone(event);
   const openMaps = () => {
     if (!event.address) return;
@@ -51,15 +58,27 @@ export function EventCard({ event, showScheduleMark = true, isLast = false }: Ev
         ) : null}
       </View>
 
-      {event.isAnjumanSchedule ? (
-        <View style={styles.seal}>
-          <Image
-            source={require('@/assets/images/pasban-logo-ui-black.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-      ) : null}
+      <View style={styles.actions}>
+        {event.isAnjumanSchedule ? (
+          <View style={styles.seal}>
+            <Image
+              source={require('@/assets/images/pasban-logo-ui-black.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
+        {canEdit ? (
+          <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
+            <Pressable
+              accessibilityLabel={`Edit ${event.contactName || event.title || 'event'}`}
+              style={styles.editButton}
+            >
+              <Pencil color={colors.oxblood} size={17} strokeWidth={2} />
+            </Pressable>
+          </Link>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -186,6 +205,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     width: 48,
+  },
+  actions: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  editButton: {
+    alignItems: 'center',
+    borderColor: colors.onIvoryLine,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   logo: {
     height: 38,

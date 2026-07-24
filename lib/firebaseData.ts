@@ -339,6 +339,20 @@ export async function fetchAdminEventsFromFirebase(): Promise<CommunityEvent[]> 
   }
 }
 
+export async function fetchAdminEventFromFirebase(eventId: string): Promise<CommunityEvent | null> {
+  if (!isFirebaseBackendEnabled()) {
+    return fallbackEvents.find((event) => event.id === eventId) || null;
+  }
+
+  try {
+    const snapshot = await getDoc(doc(getFirebaseDb(), 'events', eventId));
+    return snapshot.exists() ? normalizeEvent(snapshot.id, snapshot.data()) : null;
+  } catch (error) {
+    console.warn('Unable to load admin event from Firestore.', error);
+    return null;
+  }
+}
+
 export async function updateEventSubmissionStatusInFirebase(
   submissionId: string,
   status: AdminSubmissionStatus,

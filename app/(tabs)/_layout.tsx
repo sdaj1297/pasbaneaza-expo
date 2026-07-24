@@ -16,6 +16,7 @@ export default function TabLayout() {
         <Stack.Screen name="connect" options={{ title: 'Community' }} />
         <Stack.Screen name="login" options={{ title: 'Login' }} />
         <Stack.Screen name="admin" options={{ title: 'Admin' }} />
+        <Stack.Screen name="event-editor" options={{ title: 'Edit Event' }} />
       </Stack>
     );
   }
@@ -47,6 +48,7 @@ export default function TabLayout() {
       <Tabs.Screen name="prayer" options={{ href: null }} />
       <Tabs.Screen name="login" options={{ href: null }} />
       <Tabs.Screen name="admin" options={{ href: null }} />
+      <Tabs.Screen name="event-editor" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from '@/lib/calendarUtils';
 import {
   fetchCalendarMonthFromFirebase,
+  fetchAdminEventFromFirebase,
   fetchAdminEventsFromFirebase,
   fetchAdminEventSubmissionsFromFirebase,
   fetchEventsFromFirebase,
@@ -273,6 +274,13 @@ export async function fetchAdminEvents(): Promise<CommunityEvent[]> {
 
   const result = await request<{ events: CommunityEvent[] }>('/admin/events', { events });
   return result.events;
+}
+
+export async function fetchAdminEvent(eventId: string): Promise<CommunityEvent | null> {
+  if (isFirebaseBackendEnabled()) return fetchAdminEventFromFirebase(eventId);
+
+  const adminEvents = await fetchAdminEvents();
+  return adminEvents.find((event) => event.id === eventId) || null;
 }
 
 export async function updateEventSubmissionStatus(submissionId: string, status: AdminSubmissionStatus): Promise<void> {

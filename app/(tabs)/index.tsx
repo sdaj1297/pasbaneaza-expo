@@ -33,10 +33,17 @@ import {
   socialLinks,
   specialEvent as fallbackSpecialEvent,
   SpecialEvent,
+  StatusItem,
   todayLabel,
 } from '@/data/mock';
 import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
-import { fetchEvents, fetchHome } from '@/lib/api';
+import { fetchEvents, fetchHome, fetchTodayMajlis } from '@/lib/api';
+import { AuthUser, subscribeToAuthState } from '@/lib/auth';
+import {
+  filterUpcomingEvents,
+  isActiveMajlis,
+  selectNextCommittedEvent,
+} from '@/lib/eventTiming';
 
 const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eventType: string) => boolean> = {
   brothers: (eventType) => ['M', 'F', 'A'].includes(eventType),
@@ -55,14 +62,18 @@ export default function HomeScreen() {
   const [currentLabel, setCurrentLabel] = useState(todayLabel);
   const [currentIslamicLabel, setCurrentIslamicLabel] = useState(islamicTodayLabel);
   const [featured, setFeatured] = useState<SpecialEvent>(fallbackSpecialEvent);
+  const [liveStatuses, setLiveStatuses] = useState<StatusItem[]>([]);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [clock, setClock] = useState(() => new Date());
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([fetchHome(), fetchEvents('all')]).then(([home, events]) => {
+    Promise.all([fetchHome(), fetchEvents('all'), fetchTodayMajlis()]).then(([home, events, statuses]) => {
       if (!active) return;
       setHomeEvents(home.upcomingEvents);
       setAllEvents(events);
+      setLiveStatuses(statuses);
       setTimes(home.prayerTimes);
       setCurrentDate(home.date || fallbackEvents[0]?.date || '');
       setCurrentLabel(home.label || todayLabel);
@@ -70,22 +81,37 @@ export default function HomeScreen() {
       setFeatured(home.specialEvent);
     });
 
+    const refreshTimer = setInterval(() => {
+      setClock(new Date());
+      fetchTodayMajlis().then((statuses) => {
+        if (active) setLiveStatuses(statuses);
+      });
+    }, 30_000);
+
     return () => {
       active = false;
+      clearInterval(refreshTimer);
     };
   }, []);
 
+  useEffect(() => subscribeToAuthState(setAuthUser), []);
+
   const mergedEvents = useMemo(() => dedupeEvents([...homeEvents, ...allEvents]), [allEvents, homeEvents]);
+  const upcomingEvents = useMemo(
+    () => filterUpcomingEvents(mergedEvents, liveStatuses, clock),
+    [clock, liveStatuses, mergedEvents],
+  );
   const scheduleEvents = useMemo(() => {
-    if (audience === 'all') return mergedEvents;
-    if (audience === 'anjuman') return mergedEvents.filter((event) => event.isAnjumanSchedule);
-    return mergedEvents.filter((event) => audienceMatch[audience](event.type));
-  }, [audience, mergedEvents]);
+    if (audience === 'all') return upcomingEvents;
+    if (audience === 'anjuman') return upcomingEvents.filter((event) => event.isAnjumanSchedule);
+    return upcomingEvents.filter((event) => audienceMatch[audience](event.type));
+  }, [audience, upcomingEvents]);
   const todayEvents = useMemo(
     () => mergedEvents.filter((event) => event.date === currentDate),
     [currentDate, mergedEvents],
   );
-  const nextAnjuman = mergedEvents.find((event) => event.isAnjumanSchedule) ?? mergedEvents[0];
+  const nextAnjuman = selectNextCommittedEvent(mergedEvents, liveStatuses, clock);
+  const nextAnjumanIsActive = nextAnjuman ? isActiveMajlis(nextAnjuman.id, liveStatuses) : false;
   const hasRealFlyer = Boolean(featured.isActive && featured.flyerUrl);
   const hasLiveStream = Boolean(
     featured.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
@@ -106,7 +132,9 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
-            <Text style={styles.nextLabel}>Next committed majlis</Text>
+            <Text style={styles.nextLabel}>
+              {nextAnjumanIsActive ? 'Current committed majlis' : 'Next committed majlis'}
+            </Text>
             {nextAnjuman ? (
               <>
                 <View style={styles.nextTitleRow}>
@@ -138,6 +166,7 @@ export default function HomeScreen() {
           <View style={styles.schedulePane}>
             <HomeScheduleBoard
               activeFilter={audience}
+              canEdit={Boolean(authUser?.isAdmin)}
               events={scheduleEvents}
               onFilterChange={setAudience}
             />

@@ -8,6 +8,7 @@ import { EventCard } from '@/components/EventCard';
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { CommunityEvent, events as fallbackEvents } from '@/data/mock';
 import { fetchEvents } from '@/lib/api';
+import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 const filters = ['All', 'Anjuman', 'Brothers', 'Sisters', 'Family'] as const;
 type Filter = (typeof filters)[number];
@@ -15,6 +16,9 @@ type Filter = (typeof filters)[number];
 export default function EventsScreen() {
   const [filter, setFilter] = useState<Filter>('All');
   const [filtered, setFiltered] = useState<CommunityEvent[]>(fallbackEvents);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   useEffect(() => {
     let active = true;
@@ -61,7 +65,12 @@ export default function EventsScreen() {
 
       <View style={styles.scheduleSheet}>
         {filtered.map((event, index) => (
-          <EventCard key={event.id} event={event} isLast={index === filtered.length - 1} />
+          <EventCard
+            canEdit={Boolean(authUser?.isAdmin)}
+            key={event.id}
+            event={event}
+            isLast={index === filtered.length - 1}
+          />
         ))}
         {!filtered.length ? (
           <View style={styles.empty}>

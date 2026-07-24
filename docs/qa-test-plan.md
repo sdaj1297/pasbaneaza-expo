@@ -15,7 +15,7 @@ The most important question for testers:
 - Beta site: use the Netlify beta URL shared by the Pasban team.
 - Data source: Firebase/Firestore beta data imported from the legacy MySQL database.
 - Location/timezone: Houston, TX / America/Chicago.
-- Admin pages are open during beta. Treat all edits as test edits.
+- Admin pages require an authorized Pasban account. Treat all beta edits as test edits.
 
 Do not enter sensitive personal information into beta forms.
 
@@ -95,12 +95,16 @@ Test:
 - Confirm the homepage immediately shows schedule/event information.
 - Check any featured banner or special event area if one is active.
 - Confirm upcoming events look accurate and readable.
+- Mark today's committed event Completed and confirm it leaves both the next-majlis area and upcoming list.
+- Confirm a later committed event becomes the next majlis.
 - Open the page on mobile and desktop.
 
 Pass:
 
 - The schedule is easy to find without excessive scrolling.
 - Event names, dates, times, and labels are readable.
+- Completed, skipped, and elapsed same-day events are not presented as next/upcoming.
+- Started or En Route events are labeled as the current committed majlis.
 - Featured flyer/banner does not hide the schedule.
 
 ### 3. Events Page
@@ -119,6 +123,10 @@ Pass:
 - Anjuman only shows committed Anjuman schedule events.
 - Waiting approval and placeholder events do not appear.
 - Event cards show contact/person name, title, time, date, and location clearly.
+- Signed-in admins see a pencil action on every event card; signed-out users do not.
+- A pencil opens a protected page containing only the selected event.
+- Saving updates that event and returns clear success or error feedback.
+- The admin dashboard does not render the entire event list as editable forms.
 
 ### 4. Calendar Page
 
@@ -306,4 +314,4 @@ These are not blockers unless they break a workflow:
 - Visual design may continue evolving.
 - Prayer times may still need the final production data source.
 - Native calendar sync requires an actual iOS/Android build; web beta uses `.ics`.
-- Admin access is intentionally open during beta.
+- Admin event, calendar, and account controls require an authorized login.

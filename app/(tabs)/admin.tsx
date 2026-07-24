@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pencil } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
@@ -15,18 +16,13 @@ import {
   fetchAdminEventSubmissions,
   fetchIslamicCalendarYears,
   fetchTodayMajlis,
-  updateAdminEvent,
   updateEventSubmissionStatus,
   updateIslamicMonthLength,
   updateMajlisStatus,
 } from '@/lib/api';
 import { getHoustonDate, IslamicCalendarYear } from '@/lib/calendarUtils';
 import {
-  audienceToEventType,
-  buildDateOptions,
-  buildTimeOptions,
   eventAudienceOptions,
-  eventTypeToAudience,
   SelectOption,
 } from '@/lib/eventFormOptions';
 import { AuthUser, logout, subscribeToAuthState } from '@/lib/auth';
@@ -39,19 +35,6 @@ const yesNoOptions: SelectOption[] = [
 ];
 
 type AdminSection = (typeof adminSections)[number];
-type EventDraft = {
-  title: string;
-  contactName: string;
-  date: string;
-  time: string;
-  address: string;
-  locationName: string;
-  audience: string;
-  isAnjumanSchedule: string;
-  isPublished: string;
-  waitingApproval: string;
-  isPlaceholder: string;
-};
 
 export default function AdminScreen() {
   const [section, setSection] = useState<AdminSection>('Events');
@@ -65,8 +48,6 @@ export default function AdminScreen() {
   const [adminEvents, setAdminEvents] = useState<CommunityEvent[]>([]);
   const [eventsNotice, setEventsNotice] = useState('');
   const [eventsBusy, setEventsBusy] = useState(false);
-  const dateOptions = useMemo(() => buildDateOptions(365), []);
-  const timeOptions = useMemo(() => buildTimeOptions(), []);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthState((user) => {
@@ -179,33 +160,6 @@ export default function AdminScreen() {
     }
   };
 
-  const saveEvent = async (event: CommunityEvent, draft: EventDraft) => {
-    setEventsNotice('');
-    setEventsBusy(true);
-
-    try {
-      await updateAdminEvent(event.id, event.date, {
-        title: draft.title,
-        contactName: draft.contactName,
-        date: draft.date,
-        time: draft.time,
-        address: draft.address,
-        locationName: draft.locationName,
-        type: audienceToEventType(draft.audience),
-        isAnjumanSchedule: draft.isAnjumanSchedule === 'yes',
-        isPublished: draft.isPublished === 'yes',
-        waitingApproval: draft.waitingApproval === 'yes',
-        isPlaceholder: draft.isPlaceholder === 'yes',
-      });
-      setEventsNotice('Event saved.');
-      await refreshEvents();
-    } catch {
-      setEventsNotice('Unable to save event. Please try again.');
-    } finally {
-      setEventsBusy(false);
-    }
-  };
-
   return (
     <AppShell title="Admin" subtitle="Review submissions, maintain event data, update status, and adjust the Islamic calendar">
       <View style={styles.stack}>
@@ -287,18 +241,13 @@ export default function AdminScreen() {
 
                 <Card>
                   <Text style={styles.sectionTitle}>Upcoming Events</Text>
-                  <Text style={styles.sectionMeta}>Edit published events and admin placeholders. Waiting approval items stay hidden from public event lists.</Text>
+                  <Text style={styles.sectionMeta}>
+                    Choose one event to open its dedicated editor. Pencil actions also appear on schedule cards while you are signed in.
+                  </Text>
                 </Card>
 
                 {adminEvents.map((event) => (
-                  <AdminEventEditor
-                    key={event.id}
-                    event={event}
-                    dateOptions={dateOptions}
-                    timeOptions={timeOptions}
-                    disabled={eventsBusy}
-                    onSave={saveEvent}
-                  />
+                  <AdminEventLink event={event} key={event.id} />
                 ))}
 
                 {reviewedSubmissions.length ? (
@@ -505,105 +454,25 @@ function SubmissionCard({
   );
 }
 
-function AdminEventEditor({
-  event,
-  dateOptions,
-  timeOptions,
-  disabled,
-  onSave,
-}: {
-  event: CommunityEvent;
-  dateOptions: SelectOption[];
-  timeOptions: SelectOption[];
-  disabled: boolean;
-  onSave: (event: CommunityEvent, draft: EventDraft) => void;
-}) {
-  const [draft, setDraft] = useState<EventDraft>(() => eventToDraft(event));
-  const currentDateOptions = ensureOption(dateOptions, draft.date);
-  const currentTimeOptions = ensureOption(timeOptions, draft.time || '', draft.time || 'Time TBD');
-
-  useEffect(() => {
-    setDraft(eventToDraft(event));
-  }, [event]);
-
-  const updateDraft = (field: keyof EventDraft, value: string) => {
-    setDraft((current) => ({ ...current, [field]: value }));
-  };
-
+function AdminEventLink({ event }: { event: CommunityEvent }) {
   return (
     <Card>
-      <View style={styles.editorHeader}>
-        <View style={styles.editorCopy}>
+      <View style={styles.eventLinkRow}>
+        <View style={styles.eventLinkCopy}>
           <Text style={styles.name}>{event.contactName || event.title || 'Majlis'}</Text>
           <Text style={styles.meta}>
             {event.date} / {event.time || 'Time TBD'} / {event.isPlaceholder || event.waitingApproval ? 'Placeholder or pending' : 'Published'}
           </Text>
         </View>
-        <Pressable disabled={disabled} onPress={() => onSave(event, draft)} style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>{disabled ? 'Saving...' : 'Save'}</Text>
-        </Pressable>
+        <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
+          <Pressable accessibilityLabel={`Edit ${event.contactName || event.title || 'event'}`} style={styles.editEventButton}>
+            <Pencil color={colors.onIvory} size={17} strokeWidth={2} />
+            <Text style={styles.editEventButtonText}>Edit event</Text>
+          </Pressable>
+        </Link>
       </View>
-
-      <View style={styles.editorGrid}>
-        <TextInput
-          placeholder="Event title"
-          placeholderTextColor={colors.muted}
-          style={styles.input}
-          value={draft.title}
-          onChangeText={(value) => updateDraft('title', value)}
-        />
-        <TextInput
-          placeholder="Contact name"
-          placeholderTextColor={colors.muted}
-          style={styles.input}
-          value={draft.contactName}
-          onChangeText={(value) => updateDraft('contactName', value)}
-        />
-        <FormPicker label="Date" value={draft.date} options={currentDateOptions} onChange={(value) => updateDraft('date', value)} />
-        <FormPicker label="Time" value={draft.time} options={currentTimeOptions} onChange={(value) => updateDraft('time', value)} />
-        <FormPicker label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
-        <FormPicker label="Add To Anjuman Schedule" value={draft.isAnjumanSchedule} options={yesNoOptions} onChange={(value) => updateDraft('isAnjumanSchedule', value)} />
-        <FormPicker label="Published" value={draft.isPublished} options={yesNoOptions} onChange={(value) => updateDraft('isPublished', value)} />
-        <FormPicker label="Waiting For Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
-        <FormPicker label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => updateDraft('isPlaceholder', value)} />
-        <TextInput
-          placeholder="Location name"
-          placeholderTextColor={colors.muted}
-          style={styles.input}
-          value={draft.locationName}
-          onChangeText={(value) => updateDraft('locationName', value)}
-        />
-      </View>
-      <TextInput
-        placeholder="Address"
-        placeholderTextColor={colors.muted}
-        style={[styles.input, styles.addressInput]}
-        value={draft.address}
-        onChangeText={(value) => updateDraft('address', value)}
-      />
     </Card>
   );
-}
-
-function eventToDraft(event: CommunityEvent): EventDraft {
-  return {
-    title: event.title || '',
-    contactName: event.contactName || '',
-    date: event.date || '',
-    time: event.time || '',
-    address: event.address || '',
-    locationName: event.locationName || '',
-    audience: eventTypeToAudience(event.type),
-    isAnjumanSchedule: event.isAnjumanSchedule ? 'yes' : 'no',
-    isPublished: event.isPublished ? 'yes' : 'no',
-    waitingApproval: event.waitingApproval ? 'yes' : 'no',
-    isPlaceholder: event.isPlaceholder ? 'yes' : 'no',
-  };
-}
-
-function ensureOption(options: SelectOption[], value: string, fallbackLabel = value) {
-  if (!value || options.some((option) => option.value === value)) return options;
-  return [{ label: `${fallbackLabel} / current`, value }, ...options];
 }
 
 function payloadText(payload: Record<string, unknown>, key: string) {
@@ -849,56 +718,33 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  editorHeader: {
+  eventLinkRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
     justifyContent: 'space-between',
   },
-  editorCopy: {
+  eventLinkCopy: {
     flex: 1,
     minWidth: 260,
   },
-  saveButton: {
+  editEventButton: {
     alignItems: 'center',
     backgroundColor: colors.ivory,
     borderColor: colors.ivory,
     borderRadius: radii.sm,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
     minHeight: 42,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
   },
-  saveButtonText: {
+  editEventButtonText: {
     color: colors.onIvory,
     fontFamily: fonts.bodyBold,
     fontSize: typography.small,
-  },
-  editorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    color: colors.ink,
-    flexBasis: 220,
-    flexGrow: 1,
-    fontFamily: fonts.bodyMedium,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  addressInput: {
-    flexBasis: 'auto',
-    marginTop: spacing.sm,
-    width: '100%',
   },
   stage: {
     color: colors.gold,
