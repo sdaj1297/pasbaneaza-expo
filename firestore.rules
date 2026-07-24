@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidStatus() {
+      return request.resource.data.status in [
+        "Pending",
+        "En Route",
+        "Started",
+        "Completed",
+        "Delayed",
+        "Skipped"
+      ];
+    }
+
+    function hasOnlyStatusFields() {
+      return request.resource.data.keys().hasOnly([
+        "eventId",
+        "eventDate",
+        "status",
+        "stage",
+        "updatedAt",
+        "source"
+      ]);
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /eventDays/{date} {
+      allow read: if true;
+      allow write: if false;
+
+      match /items/{eventId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /majlisStatus/{date}/events/{eventId} {
+      allow read: if true;
+
+      allow create, update: if
+        hasOnlyStatusFields()
+        && request.resource.data.eventId == eventId
+        && request.resource.data.eventDate == date
+        && request.resource.data.source == "community"
+        && request.resource.data.stage is string
+        && request.resource.data.updatedAt == request.time
+        && isValidStatus();
+
+      allow delete: if false;
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /submissions/{submissionId} {
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          "type",
+          "name",
+          "email",
+          "phone",
+          "message",
+          "payload",
+          "source",
+          "createdAt"
+        ])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.source == "website";
+
+      allow read, update, delete: if false;
+    }
+  }
+}

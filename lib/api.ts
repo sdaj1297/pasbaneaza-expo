@@ -11,6 +11,14 @@ import {
   StatusItem,
   todayLabel,
 } from '@/data/mock';
+import {
+  fetchEventsFromFirebase,
+  fetchHomeFromFirebase,
+  fetchPrayerTimesFromFirebase,
+  fetchTodayMajlisFromFirebase,
+  isFirebaseBackendEnabled,
+  updateMajlisStatusInFirebase,
+} from '@/lib/firebaseData';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -75,11 +83,15 @@ const fallbackHome: HomePayload = {
 };
 
 export async function fetchEvents(filter = 'all'): Promise<CommunityEvent[]> {
+  if (isFirebaseBackendEnabled()) return fetchEventsFromFirebase(filter);
+
   const result = await request<{ events: CommunityEvent[] }>(`/events?filter=${filter}`, { events });
   return result.events;
 }
 
 export async function fetchHome(): Promise<HomePayload & { specialEvent: SpecialEvent }> {
+  if (isFirebaseBackendEnabled()) return fetchHomeFromFirebase();
+
   const home = await request<HomePayload>('/home', fallbackHome);
   return {
     ...home,
@@ -98,6 +110,8 @@ export async function fetchHome(): Promise<HomePayload & { specialEvent: Special
 }
 
 export async function fetchTodayMajlis(): Promise<StatusItem[]> {
+  if (isFirebaseBackendEnabled()) return fetchTodayMajlisFromFirebase();
+
   const result = await request<{ events: StatusItem[] }>('/majlis-status/today', { events: statusItems });
   return result.events.map((event, index) => ({
     ...event,
@@ -107,6 +121,10 @@ export async function fetchTodayMajlis(): Promise<StatusItem[]> {
 }
 
 export async function updateMajlisStatus(eventId: string, eventDate: string, status: StatusItem['status'], stage?: string): Promise<StatusItem[]> {
+  if (isFirebaseBackendEnabled()) {
+    return updateMajlisStatusInFirebase(eventId, eventDate, status, stage);
+  }
+
   const result = await sendJson<{ board: { events: StatusItem[] } }>(
     `/majlis-status/${eventId}`,
     {
@@ -122,6 +140,8 @@ export async function updateMajlisStatus(eventId: string, eventDate: string, sta
 }
 
 export async function fetchPrayerTimes(): Promise<PrayerTime[]> {
+  if (isFirebaseBackendEnabled()) return fetchPrayerTimesFromFirebase();
+
   const result = await request<{ times: PrayerTime[] }>('/prayer-times/today', { times: prayerTimes });
   return result.times;
 }

@@ -35,6 +35,14 @@ Set these in Netlify site settings. Do not commit secrets.
 
 ```env
 EXPO_PUBLIC_API_BASE_URL=/api
+EXPO_PUBLIC_DATA_BACKEND=firebase
+EXPO_PUBLIC_FIREBASE_API_KEY=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_APP_ID=<from Firebase config>
+EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=<from Firebase config>
 NODE_ENV=production
 PASBAN_DB_HOST=<cloud-mysql-host>
 PASBAN_DB_PORT=4000
@@ -44,6 +52,8 @@ PASBAN_DB_PASSWORD=<database-password>
 PASBAN_DB_SSL=true
 PASBAN_DB_SSL_REJECT_UNAUTHORIZED=true
 ```
+
+If `EXPO_PUBLIC_DATA_BACKEND=firebase`, the Expo app reads Firestore directly. The SQL variables are only needed if we keep the Netlify Function API connected to a MySQL-compatible beta database.
 
 Use the actual port required by the database provider. Some MySQL-compatible cloud databases use `3306`; TiDB Cloud often uses `4000`.
 
