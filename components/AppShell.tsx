@@ -1,5 +1,6 @@
 import { PropsWithChildren } from 'react';
 import { Link, usePathname } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '@/constants/theme';
@@ -21,7 +22,12 @@ const navItems = [
 
 export function AppShell({ title, subtitle, compact = false, children }: AppShellProps) {
   const pathname = usePathname();
+  const [activePath, setActivePath] = useState('');
   const showPageIntro = title !== 'Anjuman Pasban-e-Aza';
+
+  useEffect(() => {
+    setActivePath(pathname);
+  }, [pathname]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, compact && styles.compactContent]}>
@@ -37,10 +43,10 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
         {Platform.OS === 'web' ? (
           <View style={styles.nav}>
             {navItems.map((item) => {
-              const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+              const active = item.href === '/' ? activePath === '/' : activePath.startsWith(item.href);
               return (
                 <Link key={item.href} href={item.href} asChild>
-                  <Pressable style={[styles.navItem, active && styles.activeNavItem]}>
+                  <Pressable style={active ? styles.activeNavItem : styles.navItem}>
                     <Text style={[styles.navText, active && styles.activeNavText]}>{item.label}</Text>
                   </Pressable>
                 </Link>
@@ -126,7 +132,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   activeNavItem: {
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceAlt,
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   navText: {
     color: colors.muted,

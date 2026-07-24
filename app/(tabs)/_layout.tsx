@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Stack, Tabs } from 'expo-router';
 import { ColorValue, Platform, Text } from 'react-native';
 
 import { colors } from '@/constants/theme';
@@ -17,17 +17,29 @@ function TextIcon({ color, label }: { color: ColorValue; label: string }) {
 }
 
 export default function TabLayout() {
+  if (Platform.OS === 'web') {
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" options={{ title: 'Home' }} />
+        <Stack.Screen name="events" options={{ title: 'Events' }} />
+        <Stack.Screen name="calendar" options={{ title: 'Calendar' }} />
+        <Stack.Screen name="prayer" options={{ title: 'Prayer' }} />
+        <Stack.Screen name="status" options={{ title: 'Status' }} />
+        <Stack.Screen name="connect" options={{ title: 'Connect' }} />
+        <Stack.Screen name="admin" options={{ title: 'Admin' }} />
+      </Stack>
+    );
+  }
+
   const tabBarStyle =
-    Platform.OS === 'web'
-      ? ({ display: 'none' } as const)
-      : {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          height: 76,
-          minHeight: 76,
-          paddingBottom: 12,
-          paddingTop: 8,
-        };
+    {
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      height: 76,
+      minHeight: 76,
+      paddingBottom: 12,
+      paddingTop: 8,
+    };
 
   return (
     <Tabs
