@@ -10,9 +10,9 @@ export function Card({ children }: PropsWithChildren) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
     borderWidth: 1,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
 });

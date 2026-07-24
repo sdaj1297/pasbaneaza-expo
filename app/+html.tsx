@@ -35,5 +35,30 @@ export default function Root({ children }: { children: ReactNode }) {
 
 const responsiveBackground = `
 body {
-  background-color: #080606;
+  background-color: #090807;
+  margin: 0;
+  overscroll-behavior-y: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #7d1b27;
+  color: #f7f1e7;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090807;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b322d;
+  border: 2px solid #090807;
+  border-radius: 8px;
 }`;

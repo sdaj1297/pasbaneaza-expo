@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 
 export function SectionTitle({ title, action }: { title: string; action?: string }) {
   return (
@@ -21,12 +21,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.ink,
-    fontSize: 22,
-    fontWeight: '900',
+    fontFamily: fonts.displayMedium,
+    fontSize: 28,
+    lineHeight: 32,
   },
   action: {
-    color: colors.red,
+    color: colors.gold,
+    fontFamily: fonts.bodySemibold,
     fontSize: 14,
-    fontWeight: '800',
   },
 });

@@ -1,182 +1,194 @@
+import { ArrowUpRight, MapPin } from 'lucide-react-native';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Card } from '@/components/Card';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 type EventCardProps = {
   event: CommunityEvent;
   showScheduleMark?: boolean;
+  isLast?: boolean;
 };
 
-export function EventCard({ event, showScheduleMark = true }: EventCardProps) {
+export function EventCard({ event, showScheduleMark = true, isLast = false }: EventCardProps) {
+  const tone = getEventTone(event);
   const openMaps = () => {
     if (!event.address) return;
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`);
   };
-  const dateLabel = event.islamicDate || event.date;
-  const title = event.title || 'Majlis';
-  const tone = getEventTone(event);
-  const toneLabel = getEventToneLabel(event);
 
   return (
-    <Card>
-      <View style={[styles.eventFrame, styles[`${tone}Frame`]]}>
-        <View style={styles.topRow}>
-          <View style={styles.identityRow}>
-            {event.isAnjumanSchedule ? (
-              <View style={styles.logoBadge}>
-                <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
-              </View>
-            ) : null}
-            <View style={styles.datePill}>
-              <Text style={[styles.dateTime, styles[`${tone}Time`]]}>{event.time || 'TBA'}</Text>
-              <Text style={styles.dateText}>{dateLabel || 'Date pending'}</Text>
-            </View>
-          </View>
+    <View style={[styles.row, isLast && styles.lastRow]}>
+      <View style={styles.dateColumn}>
+        <Text style={styles.time}>{event.time || 'TBA'}</Text>
+        <Text style={styles.date}>{event.islamicDate || event.date || 'Date pending'}</Text>
+      </View>
 
+      <View style={styles.eventCopy}>
+        <View style={styles.metaRow}>
           {showScheduleMark ? (
-            <View style={[styles.mark, styles[`${tone}Mark`]]}>
-              <Text style={[styles.markText, styles[`${tone}MarkText`]]}>{toneLabel}</Text>
-            </View>
+            <>
+              <View style={[styles.toneMark, styles[`${tone}ToneMark`]]} />
+              <Text style={[styles.toneText, styles[`${tone}ToneText`]]}>
+                {getEventToneLabel(event)}
+              </Text>
+            </>
           ) : null}
+          <Text style={styles.audience}>{getEventAudienceLabel(event)}</Text>
         </View>
-
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.contact}>{event.contactName || title}</Text>
-        <Text style={styles.meta}>{getEventAudienceLabel(event)} / {event.locationName || 'Location pending'}</Text>
+        <Text style={styles.host}>{event.contactName || event.title || 'Majlis'}</Text>
+        <Text style={styles.title}>{event.title || 'Program details pending'}</Text>
+        <View style={styles.locationRow}>
+          <MapPin color={colors.onIvoryMuted} size={15} strokeWidth={1.8} />
+          <Text style={styles.location}>{event.locationName || event.address || 'Location to be announced'}</Text>
+        </View>
         {event.address ? (
-          <Pressable onPress={openMaps}>
+          <Pressable onPress={openMaps} style={styles.addressLink}>
             <Text style={styles.address}>{event.address}</Text>
+            <ArrowUpRight color={colors.oxblood} size={16} strokeWidth={2} />
           </Pressable>
         ) : null}
       </View>
-    </Card>
+
+      {event.isAnjumanSchedule ? (
+        <View style={styles.seal}>
+          <Image
+            source={require('@/assets/images/pasban-logo-ui-black.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  eventFrame: {
-    borderLeftWidth: 4,
-    borderRadius: radii.sm,
-    margin: -spacing.xs,
-    padding: spacing.sm,
+  row: {
+    alignItems: 'flex-start',
+    borderBottomColor: colors.onIvoryLine,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    minHeight: 156,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
-  committedFrame: {
-    backgroundColor: colors.committedBg,
-    borderLeftColor: colors.committedBorder,
+  lastRow: {
+    borderBottomWidth: 0,
   },
-  sistersFrame: {
-    backgroundColor: colors.sistersBg,
-    borderLeftColor: colors.sistersBorder,
+  dateColumn: {
+    width: 118,
   },
-  communityFrame: {
-    backgroundColor: colors.communityBg,
-    borderLeftColor: colors.communityBorder,
+  time: {
+    color: colors.onIvory,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 25,
+    lineHeight: 29,
   },
-  topRow: {
+  date: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
+    lineHeight: 18,
+    marginTop: spacing.xs,
+  },
+  eventCopy: {
+    flex: 1,
+    minWidth: 210,
+  },
+  metaRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
-  identityRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexShrink: 1,
-    gap: spacing.sm,
+  toneMark: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
-  logoBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.night,
-    borderColor: 'rgba(212, 168, 60, .55)',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    width: 42,
+  committedToneMark: {
+    backgroundColor: colors.goldDark,
   },
-  logo: {
-    height: 30,
-    width: 30,
+  sistersToneMark: {
+    backgroundColor: '#397994',
   },
-  datePill: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+  communityToneMark: {
+    backgroundColor: '#3e7659',
   },
-  dateTime: {
-    color: colors.red,
-    fontSize: 15,
-    fontWeight: '900',
+  toneText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
   },
-  committedTime: {
-    color: colors.gold,
+  committedToneText: {
+    color: colors.goldDark,
   },
-  sistersTime: {
-    color: colors.blue,
+  sistersToneText: {
+    color: '#397994',
   },
-  communityTime: {
-    color: '#75d39b',
+  communityToneText: {
+    color: '#3e7659',
   },
-  dateText: {
-    color: colors.muted,
-    fontSize: 12,
+  audience: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.overline,
   },
-  mark: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  committedMark: {
-    backgroundColor: 'rgba(212, 168, 60, .16)',
-    borderColor: colors.gold,
-  },
-  sistersMark: {
-    backgroundColor: 'rgba(117, 183, 230, .14)',
-    borderColor: colors.blue,
-  },
-  communityMark: {
-    backgroundColor: 'rgba(47, 107, 77, .24)',
-    borderColor: colors.communityBorder,
-  },
-  markText: {
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  committedMarkText: {
-    color: colors.gold,
-  },
-  sistersMarkText: {
-    color: colors.blue,
-  },
-  communityMarkText: {
-    color: '#75d39b',
+  host: {
+    color: colors.onIvory,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 28,
+    lineHeight: 32,
+    marginTop: spacing.xs,
   },
   title: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 27,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginTop: 2,
   },
-  contact: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: spacing.xs,
+  locationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
-  meta: {
-    color: colors.muted,
+  location: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
+  },
+  addressLink: {
+    alignItems: 'flex-start',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
     marginTop: spacing.xs,
+    maxWidth: 660,
   },
   address: {
-    color: colors.blue,
-    fontSize: 15,
-    marginTop: spacing.sm,
+    color: colors.oxblood,
+    flex: 1,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 19,
+  },
+  seal: {
+    alignItems: 'center',
+    borderColor: colors.gold,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 48,
+  },
+  logo: {
+    height: 38,
+    width: 38,
   },
 });

@@ -1,17 +1,37 @@
 import { PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, radii, shadows, spacing } from '@/constants/theme';
 
 type ActionButtonProps = PropsWithChildren<{
   onPress?: () => void;
-  variant?: 'primary' | 'dark' | 'outline' | 'lightOutline';
+  variant?: 'primary' | 'dark' | 'outline' | 'lightOutline' | 'quiet';
+  disabled?: boolean;
 }>;
 
-export function ActionButton({ children, onPress, variant = 'primary' }: ActionButtonProps) {
+export function ActionButton({ children, onPress, variant = 'primary', disabled = false }: ActionButtonProps) {
   return (
-    <Pressable onPress={onPress} style={[styles.button, styles[variant]]}>
-      <Text style={[styles.text, variant === 'outline' && styles.outlineText, variant === 'dark' && styles.darkText, variant === 'lightOutline' && styles.lightOutlineText]}>{children}</Text>
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        styles[variant],
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+    >
+      <Text
+        style={[
+          styles.text,
+          variant === 'outline' && styles.outlineText,
+          variant === 'dark' && styles.darkText,
+          variant === 'lightOutline' && styles.lightOutlineText,
+          variant === 'quiet' && styles.quietText,
+        ]}
+      >
+        {children}
+      </Text>
     </Pressable>
   );
 }
@@ -21,18 +41,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radii.sm,
     borderWidth: 1,
-    minHeight: 46,
+    minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   primary: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    ...shadows.small,
+    backgroundColor: colors.ivory,
+    borderColor: colors.ivory,
   },
   dark: {
-    backgroundColor: colors.night,
-    borderColor: colors.night,
+    backgroundColor: colors.oxblood,
+    borderColor: colors.oxblood,
   },
   outline: {
     backgroundColor: 'transparent',
@@ -40,13 +61,16 @@ const styles = StyleSheet.create({
   },
   lightOutline: {
     backgroundColor: 'transparent',
-    borderColor: 'rgba(255, 250, 240, .45)',
+    borderColor: 'rgba(247, 241, 231, .34)',
+  },
+  quiet: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.surfaceAlt,
   },
   text: {
-    color: colors.night,
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
     fontSize: 14,
-    fontWeight: '900',
-    textTransform: 'uppercase',
   },
   outlineText: {
     color: colors.ink,
@@ -56,5 +80,15 @@ const styles = StyleSheet.create({
   },
   lightOutlineText: {
     color: colors.ivory,
+  },
+  quietText: {
+    color: colors.ink,
+  },
+  pressed: {
+    opacity: 0.76,
+    transform: [{ translateY: 1 }],
+  },
+  disabled: {
+    opacity: 0.46,
   },
 });

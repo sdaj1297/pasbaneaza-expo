@@ -1,9 +1,26 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { Href, Link, usePathname } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  CalendarDays,
+  CircleUserRound,
+  Home,
+  List,
+  Menu,
+  Plus,
+  Radio,
+} from 'lucide-react-native';
+import {
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
+import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 type AppShellProps = PropsWithChildren<{
@@ -16,187 +33,299 @@ type NavItem = {
   href: Href;
   label: string;
   matchPath?: string;
-  isCta?: boolean;
 };
 
-const baseNavItems: NavItem[] = [
-  { href: '/', label: 'Home' },
-  { href: '/events', label: 'Events' },
+const desktopNav: NavItem[] = [
+  { href: '/events', label: 'Schedule' },
   { href: '/calendar', label: 'Calendar' },
+  { href: '/status', label: 'Live Status' },
   { href: '/prayer', label: 'Prayer' },
-  { href: '/status', label: 'Status' },
-  { href: '/connect', label: 'Connect' },
-  { href: '/connect?intent=event', label: 'Submit Event', matchPath: '/submit-event', isCta: true },
+  { href: '/connect', label: 'Community' },
+];
+
+const mobileNav = [
+  { href: '/' as Href, label: 'Home', icon: Home },
+  { href: '/events' as Href, label: 'Schedule', icon: List },
+  { href: '/calendar' as Href, label: 'Calendar', icon: CalendarDays },
+  { href: '/status' as Href, label: 'Status', icon: Radio },
+  { href: '/connect' as Href, label: 'More', icon: Menu },
 ];
 
 export function AppShell({ title, subtitle, compact = false, children }: AppShellProps) {
   const pathname = usePathname();
-  const [activePath, setActivePath] = useState('');
+  const width = useResponsiveWidth();
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const isCompactWeb = Platform.OS === 'web' && width < 820;
   const showPageIntro = title !== 'Anjuman Pasban-e-Aza';
-  const navItems: NavItem[] = [
-    ...baseNavItems,
-    authUser?.isAdmin ? { href: '/admin', label: 'Admin' } : { href: '/login', label: 'Login' },
-  ];
+  const accountHref: Href = authUser?.isAdmin ? '/admin' : '/login';
+  const accountLabel = authUser?.isAdmin ? 'Admin' : 'Login';
 
-  useEffect(() => {
-    setActivePath(pathname);
-  }, [pathname]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthState(setAuthUser);
-    return unsubscribe;
-  }, []);
+  useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, compact && styles.compactContent]}>
-      <View style={styles.header}>
-        <View style={styles.brandRow}>
-          <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
-          <View style={styles.brandCopy}>
-            <Text style={styles.brandTitle}>Anjuman Pasban-e-Aza</Text>
-            <Text style={styles.brandSubtitle}>Houston, TX</Text>
-          </View>
+    <View testID={`app-shell-${Math.round(width)}`} style={styles.shell}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          compact && styles.compactContent,
+          isCompactWeb && styles.mobileWebContent,
+        ]}
+      >
+        <View style={styles.header}>
+          <Link href="/" asChild>
+            <Pressable style={styles.brand}>
+              <View style={styles.brandMark}>
+                <Image
+                  source={require('@/assets/images/pasban-logo-ui-white.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.brandCopy}>
+                <Text style={styles.brandTitle}>Pasban-e-Aza</Text>
+                <Text style={styles.brandSubtitle}>Anjuman · Houston</Text>
+              </View>
+            </Pressable>
+          </Link>
+
+          {Platform.OS === 'web' && !isCompactWeb ? (
+            <View style={styles.desktopNav}>
+              {desktopNav.map((item) => {
+                const matchPath = item.matchPath || String(item.href);
+                const active = pathname.startsWith(matchPath);
+                return (
+                  <Link key={String(item.href)} href={item.href} asChild>
+                    <Pressable style={styles.navItem}>
+                      <Text style={[styles.navText, active && styles.activeNavText]}>{item.label}</Text>
+                      {active ? <View style={styles.navIndicator} /> : null}
+                    </Pressable>
+                  </Link>
+                );
+              })}
+              <Link href="/connect?intent=event" asChild>
+                <Pressable style={styles.submitNav}>
+                  <Plus color={colors.onIvory} size={16} strokeWidth={2.2} />
+                  <Text style={styles.submitNavText}>Submit</Text>
+                </Pressable>
+              </Link>
+              <Link href={accountHref} asChild>
+                <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
+                  <CircleUserRound color={colors.muted} size={21} strokeWidth={1.8} />
+                </Pressable>
+              </Link>
+            </View>
+          ) : (
+            <Link href={accountHref} asChild>
+              <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
+                <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
+              </Pressable>
+            </Link>
+          )}
         </View>
 
-        {Platform.OS === 'web' ? (
-          <View style={styles.nav}>
-            {navItems.map((item) => {
-              const matchPath = item.matchPath || String(item.href);
-              const active = matchPath === '/' ? activePath === '/' : activePath.startsWith(matchPath);
-              return (
-                <Link key={String(item.href)} href={item.href} asChild>
-                  <Pressable style={item.isCta ? styles.navCta : active ? styles.activeNavItem : styles.navItem}>
-                    <Text style={[item.isCta ? styles.navCtaText : styles.navText, active && styles.activeNavText]}>{item.label}</Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
+        {showPageIntro ? (
+          <View style={styles.pageIntro}>
+            <Text style={styles.pageEyebrow}>Pasban-e-Aza · Houston</Text>
+            <Text style={styles.pageTitle}>{title}</Text>
+            {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
           </View>
         ) : null}
-      </View>
 
-      {showPageIntro ? (
-        <View style={styles.pageIntro}>
-          <Text style={styles.pageTitle}>{title}</Text>
-          {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
+        {children}
+      </ScrollView>
+
+      {isCompactWeb ? (
+        <View style={styles.mobileNav}>
+          {mobileNav.map((item) => {
+            const active = item.href === '/' ? pathname === '/' : pathname.startsWith(String(item.href));
+            const Icon = item.icon;
+            return (
+              <Link key={String(item.href)} href={item.href} asChild>
+                <Pressable accessibilityLabel={item.label} style={styles.mobileNavItem}>
+                  <Icon
+                    color={active ? colors.gold : colors.textSubtle}
+                    size={21}
+                    strokeWidth={active ? 2.2 : 1.8}
+                  />
+                  <Text style={[styles.mobileNavLabel, active && styles.mobileNavLabelActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              </Link>
+            );
+          })}
         </View>
       ) : null}
-
-      {children}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  shell: {
+    backgroundColor: colors.canvas,
     flex: 1,
-    backgroundColor: colors.paper,
+  },
+  screen: {
+    backgroundColor: colors.canvas,
+    flex: 1,
   },
   content: {
-    width: '100%',
-    maxWidth: 1120,
     alignSelf: 'center',
-    padding: spacing.md,
+    maxWidth: 1240,
     paddingBottom: 96,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
   },
   compactContent: {
-    maxWidth: 820,
+    maxWidth: 900,
+  },
+  mobileWebContent: {
+    paddingBottom: 112,
+    paddingHorizontal: spacing.md,
   },
   header: {
-    borderBottomColor: colors.border,
+    alignItems: 'center',
+    borderBottomColor: colors.borderSoft,
     borderBottomWidth: 1,
-    marginBottom: spacing.md,
-    paddingBottom: Platform.OS === 'web' ? 0 : spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 80,
   },
-  brandRow: {
+  brand: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
-    minHeight: 56,
-    paddingBottom: Platform.OS === 'web' ? spacing.sm : 0,
+    minHeight: 60,
+  },
+  brandMark: {
+    alignItems: 'center',
+    height: 54,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 54,
   },
   logo: {
-    height: 44,
-    width: 44,
+    height: 54,
+    width: 54,
   },
   brandCopy: {
-    flex: 1,
+    gap: 1,
   },
   brandTitle: {
     color: colors.ink,
-    fontSize: 19,
-    fontWeight: '900',
+    fontFamily: fonts.displaySemibold,
+    fontSize: 24,
+    lineHeight: 27,
   },
   brandSubtitle: {
-    color: colors.muted,
-    fontSize: typography.label,
-    fontWeight: '700',
-    marginTop: 2,
-    textTransform: 'uppercase',
+    color: colors.textSubtle,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.overline,
   },
-  nav: {
+  desktopNav: {
     alignItems: 'center',
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   navItem: {
-    borderRadius: radii.sm,
-    minHeight: 34,
+    alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
     paddingHorizontal: spacing.sm,
-  },
-  activeNavItem: {
-    borderRadius: radii.sm,
-    backgroundColor: colors.surfaceAlt,
-    minHeight: 34,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  navCta: {
-    borderRadius: radii.sm,
-    backgroundColor: colors.gold,
-    minHeight: 34,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    position: 'relative',
   },
   navText: {
     color: colors.muted,
-    fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  navCtaText: {
-    color: colors.night,
-    fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   activeNavText: {
-    color: colors.red,
+    color: colors.ink,
+  },
+  navIndicator: {
+    backgroundColor: colors.gold,
+    bottom: 3,
+    height: 2,
+    left: spacing.sm,
+    position: 'absolute',
+    right: spacing.sm,
+  },
+  submitNav: {
+    alignItems: 'center',
+    backgroundColor: colors.ivory,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  submitNavText: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  accountButton: {
+    alignItems: 'center',
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
   },
   pageIntro: {
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSoft,
     borderBottomWidth: 1,
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  pageEyebrow: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   pageTitle: {
     color: colors.ink,
-    fontSize: 34,
-    fontWeight: '900',
-    lineHeight: 40,
+    fontFamily: fonts.displayMedium,
+    fontSize: 46,
+    lineHeight: 50,
+    marginTop: spacing.xs,
   },
   pageSubtitle: {
     color: colors.muted,
+    fontFamily: fonts.body,
     fontSize: typography.body,
-    fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: 23,
     marginTop: spacing.xs,
+    maxWidth: 680,
+  },
+  mobileNav: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    bottom: 0,
+    flexDirection: 'row',
+    left: 0,
+    minHeight: 72,
+    paddingBottom: spacing.xs,
+    paddingTop: spacing.xs,
+    position: 'absolute',
+    right: 0,
+  },
+  mobileNavItem: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 3,
+    justifyContent: 'center',
+    minHeight: 56,
+  },
+  mobileNavLabel: {
+    color: colors.textSubtle,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 10,
+  },
+  mobileNavLabelActive: {
+    color: colors.goldSoft,
   },
 });

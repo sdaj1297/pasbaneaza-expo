@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
+import { Plus } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
-import { Card } from '@/components/Card';
 import { EventCard } from '@/components/EventCard';
-import { colors, spacing } from '@/constants/theme';
+import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { CommunityEvent, events as fallbackEvents } from '@/data/mock';
 import { fetchEvents } from '@/lib/api';
 
 const filters = ['All', 'Anjuman', 'Brothers', 'Sisters', 'Family'] as const;
 type Filter = (typeof filters)[number];
-
-function apiFilter(filter: Filter) {
-  return filter.toLowerCase();
-}
 
 export default function EventsScreen() {
   const [filter, setFilter] = useState<Filter>('All');
@@ -22,7 +18,7 @@ export default function EventsScreen() {
 
   useEffect(() => {
     let active = true;
-    fetchEvents(apiFilter(filter)).then((nextEvents) => {
+    fetchEvents(filter.toLowerCase()).then((nextEvents) => {
       if (active) setFiltered(nextEvents);
     });
     return () => {
@@ -31,120 +27,145 @@ export default function EventsScreen() {
   }, [filter]);
 
   return (
-    <AppShell title="Events" subtitle="Community and Anjuman schedule">
-      <Card>
-        <View style={styles.submitRow}>
-          <View style={styles.submitCopy}>
-            <Text style={styles.submitTitle}>Have a majlis or community program to list?</Text>
-            <Text style={styles.submitText}>Submit the details publicly. New events stay pending review until the Pasban team approves them.</Text>
-          </View>
-          <Link href="/connect?intent=event" asChild>
-            <Pressable style={styles.ctaButton}>
-              <Text style={styles.ctaButtonText}>Submit New Event</Text>
-            </Pressable>
-          </Link>
+    <AppShell title="Schedule" subtitle="Committed Anjuman programs and approved community majalis">
+      <View style={styles.scheduleHeader}>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerEyebrow}>Houston community calendar</Text>
+          <Text style={styles.headerTitle}>Find the next majlis</Text>
+          <Text style={styles.headerText}>
+            Browse approved listings or submit a program for the Pasban team to review.
+          </Text>
         </View>
-      </Card>
-
-      <View style={styles.filters}>
-        {filters.map((item) => (
-          <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.activeFilter]}>
-            <Text style={[styles.filterText, filter === item && styles.activeFilterText]}>{item}</Text>
+        <Link href="/connect?intent=event" asChild>
+          <Pressable style={styles.submitButton}>
+            <Plus color={colors.onIvory} size={18} strokeWidth={2.2} />
+            <Text style={styles.submitText}>Submit an event</Text>
           </Pressable>
-        ))}
+        </Link>
       </View>
 
-      <View style={styles.stack}>
-        {!filtered.length ? (
-          <Card>
-            <Text style={styles.emptyTitle}>No events found for this filter.</Text>
-            <Text style={styles.emptyText}>Try another filter or submit a new event for review.</Text>
-          </Card>
-        ) : null}
-        {filtered.map((event) => (
-          <EventCard key={event.id} event={event} />
+      <View style={styles.filters}>
+        {filters.map((item) => {
+          const active = filter === item;
+          return (
+            <Pressable
+              key={item}
+              onPress={() => setFilter(item)}
+              style={[styles.filter, active && styles.activeFilter]}
+            >
+              <Text style={[styles.filterText, active && styles.activeFilterText]}>{item}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.scheduleSheet}>
+        {filtered.map((event, index) => (
+          <EventCard key={event.id} event={event} isLast={index === filtered.length - 1} />
         ))}
+        {!filtered.length ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No events in this view</Text>
+            <Text style={styles.emptyText}>Choose another audience or submit a new event for review.</Text>
+          </View>
+        ) : null}
       </View>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  submitRow: {
-    alignItems: 'center',
+  scheduleHeader: {
+    alignItems: 'flex-end',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.lg,
     justifyContent: 'space-between',
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xl,
   },
-  submitCopy: {
+  headerCopy: {
     flex: 1,
-    minWidth: 260,
+    minWidth: 250,
   },
-  submitTitle: {
+  headerEyebrow: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
     color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  submitText: {
-    color: colors.muted,
-    lineHeight: 21,
+    fontFamily: fonts.displayMedium,
+    fontSize: 38,
+    lineHeight: 42,
     marginTop: spacing.xs,
   },
-  ctaButton: {
-    alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    borderRadius: 6,
-    borderWidth: 1,
-    minHeight: 46,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  headerText: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginTop: spacing.xs,
+    maxWidth: 580,
   },
-  ctaButtonText: {
-    color: colors.night,
-    fontSize: 14,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  submitButton: {
+    alignItems: 'center',
+    backgroundColor: colors.ivory,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  submitText: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   filters: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
   filter: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderBottomColor: 'transparent',
+    borderBottomWidth: 2,
+    minHeight: 40,
+    justifyContent: 'center',
   },
   activeFilter: {
-    backgroundColor: colors.red,
-    borderColor: colors.red,
+    borderBottomColor: colors.gold,
   },
   filterText: {
-    color: colors.ink,
-    fontWeight: '800',
+    color: colors.textSubtle,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   activeFilterText: {
-    color: '#fff',
+    color: colors.ink,
   },
-  stack: {
-    gap: spacing.sm,
+  scheduleSheet: {
+    ...shadows.medium,
+    backgroundColor: colors.ivory,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+  },
+  empty: {
+    padding: spacing.xl,
   },
   emptyTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
+    color: colors.onIvory,
+    fontFamily: fonts.displayMedium,
+    fontSize: typography.title,
   },
   emptyText: {
-    color: colors.muted,
-    lineHeight: 21,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.body,
+    lineHeight: 22,
     marginTop: spacing.xs,
   },
 });

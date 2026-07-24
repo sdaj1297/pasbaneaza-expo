@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createElement } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
 
 type LiveStreamProps = {
   title: string;
@@ -11,15 +12,33 @@ type LiveStreamProps = {
 export function LiveStream({ title, embedUrl }: LiveStreamProps) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>Live Stream</Text>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.titleRow}>
+        <View style={styles.liveDot} />
+        <Text style={styles.label}>Live stream</Text>
+        <Text numberOfLines={1} style={styles.title}>{title}</Text>
+      </View>
       <View style={styles.frame}>
-        <WebView
-          source={{ uri: embedUrl }}
-          style={styles.webview}
-          allowsFullscreenVideo
-          mediaPlaybackRequiresUserAction={false}
-        />
+        {Platform.OS === 'web'
+          ? createElement('iframe', {
+              allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+              allowFullScreen: true,
+              frameBorder: '0',
+              src: embedUrl,
+              style: {
+                border: 0,
+                height: '100%',
+                width: '100%',
+              },
+              title,
+            })
+          : (
+            <WebView
+              source={{ uri: embedUrl }}
+              style={styles.webview}
+              allowsFullscreenVideo
+              mediaPlaybackRequiresUserAction={false}
+            />
+          )}
       </View>
     </View>
   );
@@ -27,29 +46,39 @@ export function LiveStream({ title, embedUrl }: LiveStreamProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.night,
-    borderColor: 'rgba(217, 173, 67, .35)',
+    backgroundColor: colors.surface,
     borderRadius: radii.md,
-    borderWidth: 1,
-    padding: spacing.md,
+    overflow: 'hidden',
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 54,
+    paddingHorizontal: spacing.md,
+  },
+  liveDot: {
+    backgroundColor: colors.red,
+    borderRadius: 999,
+    height: 8,
+    width: 8,
   },
   label: {
-    color: colors.gold,
-    fontSize: 12,
-    fontWeight: '900',
+    color: colors.red,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1,
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.ivory,
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: spacing.md,
-    marginTop: spacing.xs,
+    color: colors.muted,
+    flex: 1,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
   },
   frame: {
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
-    borderRadius: radii.sm,
     overflow: 'hidden',
   },
   webview: {

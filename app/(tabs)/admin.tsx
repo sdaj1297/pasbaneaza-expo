@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
 import { FormPicker } from '@/components/FormPicker';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
 import { CommunityEvent, MajlisStatus, StatusItem, statusItems } from '@/data/mock';
 import {
   AdminEventReviewInput,
@@ -591,19 +591,22 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.ink,
-    fontSize: typography.title,
-    fontWeight: '900',
+    fontFamily: fonts.displayMedium,
+    fontSize: 28,
+    lineHeight: 32,
   },
   sectionMeta: {
     color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
     lineHeight: 21,
     marginTop: spacing.xs,
   },
   loginButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.ivory,
+    borderColor: colors.ivory,
     borderRadius: radii.sm,
     borderWidth: 1,
     minHeight: 42,
@@ -612,9 +615,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   loginButtonText: {
-    color: colors.night,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   signedInRow: {
     alignItems: 'center',
@@ -639,41 +642,38 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: colors.ink,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   sectionTabs: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.lg,
+    marginTop: spacing.sm,
   },
   sectionTab: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    minHeight: 40,
+    borderBottomColor: 'transparent',
+    borderBottomWidth: 2,
+    minHeight: 46,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
   },
   activeSectionTab: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    minHeight: 40,
+    borderBottomColor: colors.gold,
+    borderBottomWidth: 2,
+    minHeight: 46,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
   },
   sectionText: {
-    color: colors.ink,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.textSubtle,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   activeSectionText: {
-    color: colors.night,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   panelHeader: {
     alignItems: 'center',
@@ -698,27 +698,33 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.ink,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   name: {
     color: colors.ink,
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 27,
+    fontFamily: fonts.displayMedium,
+    fontSize: 25,
+    lineHeight: 29,
   },
   meta: {
     color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
     lineHeight: 20,
     marginTop: spacing.xs,
   },
   address: {
     color: colors.blue,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
     lineHeight: 20,
     marginTop: spacing.sm,
   },
   message: {
     color: colors.ink,
+    fontFamily: fonts.body,
+    fontSize: typography.body,
     lineHeight: 21,
     marginTop: spacing.sm,
   },
@@ -751,9 +757,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: colors.ink,
+    fontFamily: fonts.bodyBold,
     fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
   },
   buttons: {
     flexDirection: 'row',
@@ -766,14 +771,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.sm,
     borderWidth: 1,
-    minHeight: 38,
+    minHeight: 40,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
   },
   activeButton: {
-    backgroundColor: colors.red,
-    borderColor: colors.red,
+    backgroundColor: colors.ivory,
+    borderColor: colors.ivory,
     borderRadius: radii.sm,
     borderWidth: 1,
     minHeight: 38,
@@ -789,20 +794,23 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.ink,
-    fontWeight: '800',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   activeButtonText: {
-    color: '#fff',
-    fontWeight: '900',
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   ghostButtonText: {
     color: colors.muted,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   notice: {
     color: colors.gold,
-    fontWeight: '800',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
     marginTop: spacing.md,
   },
   reviewedStack: {
@@ -828,8 +836,8 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.ivory,
+    borderColor: colors.ivory,
     borderRadius: radii.sm,
     borderWidth: 1,
     minHeight: 42,
@@ -837,9 +845,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   saveButtonText: {
-    color: colors.night,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   editorGrid: {
     flexDirection: 'row',
@@ -855,6 +863,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     flexBasis: 220,
     flexGrow: 1,
+    fontFamily: fonts.bodyMedium,
     fontSize: 16,
     minHeight: 48,
     paddingHorizontal: spacing.md,
@@ -866,8 +875,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   stage: {
-    color: colors.goldDark,
-    fontWeight: '800',
+    color: colors.gold,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
     marginTop: spacing.sm,
   },
   yearRow: {
@@ -894,11 +904,11 @@ const styles = StyleSheet.create({
   },
   yearText: {
     color: colors.ink,
-    fontWeight: '900',
+    fontFamily: fonts.bodySemibold,
   },
   activeYearText: {
     color: '#fff',
-    fontWeight: '900',
+    fontFamily: fonts.bodyBold,
   },
   monthStack: {
     gap: spacing.sm,
@@ -919,13 +929,13 @@ const styles = StyleSheet.create({
   },
   monthName: {
     color: colors.ink,
+    fontFamily: fonts.bodySemibold,
     fontSize: 16,
-    fontWeight: '900',
   },
   monthMeta: {
     color: colors.textSubtle,
+    fontFamily: fonts.bodyMedium,
     fontSize: 12,
-    fontWeight: '800',
     marginTop: 2,
   },
   lengthButtons: {
@@ -954,15 +964,16 @@ const styles = StyleSheet.create({
   },
   lengthText: {
     color: colors.ink,
-    fontWeight: '900',
+    fontFamily: fonts.bodySemibold,
   },
   activeLengthText: {
     color: colors.night,
-    fontWeight: '900',
+    fontFamily: fonts.bodyBold,
   },
   calendarNotice: {
     color: colors.gold,
-    fontWeight: '800',
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
     marginTop: spacing.md,
   },
 });

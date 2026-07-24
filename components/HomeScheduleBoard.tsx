@@ -1,8 +1,17 @@
 import { Link } from 'expo-router';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ArrowUpRight, MapPin, Plus } from 'lucide-react-native';
+import {
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
+import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 export type HomeScheduleFilter = 'all' | 'anjuman' | 'brothers' | 'sisters' | 'family';
@@ -22,341 +31,395 @@ type HomeScheduleBoardProps = {
 };
 
 export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: HomeScheduleBoardProps) {
+  const width = useResponsiveWidth();
+  const compact = width < 680;
+
   return (
     <View style={styles.board}>
       <View style={styles.boardHead}>
-        <View style={styles.boardHeadRow}>
-          <View style={styles.boardHeadCopy}>
-            <Text style={styles.kicker}>Schedule</Text>
-            <Text style={styles.heading}>Programs coming up in Houston</Text>
+        <View style={styles.boardTitleRow}>
+          <View style={styles.boardTitleCopy}>
+            <Text style={styles.kicker}>Houston schedule</Text>
+            <Text style={styles.heading}>Upcoming majalis</Text>
+            <Text style={styles.boardDescription}>
+              Committed Anjuman programs and approved community listings.
+            </Text>
           </View>
           <Link href="/connect?intent=event" asChild>
             <Pressable style={styles.submitButton}>
-              <Text style={styles.submitButtonText}>Submit Event</Text>
+              <Plus color={colors.ivory} size={17} strokeWidth={2.3} />
+              <Text style={styles.submitButtonText}>Submit event</Text>
             </Pressable>
           </Link>
         </View>
-      </View>
 
-      <View style={styles.filters}>
-        {(Object.keys(filterLabels) as HomeScheduleFilter[]).map((filter) => {
-          const active = activeFilter === filter;
-          return (
-            <Pressable
-              key={filter}
-              onPress={() => onFilterChange(filter)}
-              style={[styles.filter, active && styles.activeFilter]}>
-              <Text style={[styles.filterText, active && styles.activeFilterText]}>{filterLabels[filter]}</Text>
-            </Pressable>
-          );
-        })}
+        <View style={styles.filters}>
+          {(Object.keys(filterLabels) as HomeScheduleFilter[]).map((filter) => {
+            const active = activeFilter === filter;
+            return (
+              <Pressable
+                key={filter}
+                onPress={() => onFilterChange(filter)}
+                style={[styles.filter, active && styles.activeFilter]}
+              >
+                <Text style={[styles.filterText, active && styles.activeFilterText]}>
+                  {filterLabels[filter]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.list}>
-        {events.slice(0, 8).map((event) => (
-          <ScheduleRow key={event.id} event={event} />
+        {events.slice(0, 8).map((event, index) => (
+          <ScheduleRow
+            key={event.id}
+            compact={compact}
+            event={event}
+            isLast={index === Math.min(events.length, 8) - 1}
+          />
         ))}
         {events.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No programs listed for this view.</Text>
-            <Text style={styles.emptyText}>Try another filter or check the full calendar.</Text>
+            <Text style={styles.emptyTitle}>No programs in this view</Text>
+            <Text style={styles.emptyText}>Choose another audience or check the full calendar.</Text>
           </View>
         ) : null}
       </View>
+
+      <Link href="/events" asChild>
+        <Pressable style={styles.fullScheduleLink}>
+          <Text style={styles.fullScheduleText}>View the complete schedule</Text>
+          <ArrowUpRight color={colors.onIvory} size={18} strokeWidth={2} />
+        </Pressable>
+      </Link>
     </View>
   );
 }
 
-function ScheduleRow({ event }: { event: CommunityEvent }) {
+function ScheduleRow({
+  event,
+  compact,
+  isLast,
+}: {
+  event: CommunityEvent;
+  compact: boolean;
+  isLast: boolean;
+}) {
   const tone = getEventTone(event);
-  const toneLabel = getEventToneLabel(event);
   const openMaps = () => {
     if (!event.address) return;
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`);
   };
 
   return (
-    <View style={[styles.row, styles[`${tone}Row`]]}>
-      <View style={styles.timeColumn}>
-        <Text style={[styles.time, styles[`${tone}Time`]]}>{event.time || 'TBA'}</Text>
+    <View style={[styles.row, compact && styles.compactRow, isLast && styles.lastRow]}>
+      <View style={[styles.timeColumn, compact && styles.compactTimeColumn]}>
+        <Text style={styles.time}>{event.time || 'TBA'}</Text>
         <Text style={styles.date}>{event.islamicDate || event.date}</Text>
       </View>
 
       <View style={styles.eventColumn}>
-        <View style={styles.badgeRow}>
-          {event.isAnjumanSchedule ? (
-            <View style={styles.logoBadge}>
-              <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
-            </View>
-          ) : null}
-          <View style={[styles.badge, styles[`${tone}Badge`]]}>
-            <Text style={[styles.badgeText, styles[`${tone}BadgeText`]]}>{toneLabel}</Text>
-          </View>
+        <View style={styles.identityRow}>
+          <View style={[styles.toneMark, styles[`${tone}ToneMark`]]} />
+          <Text style={[styles.toneLabel, styles[`${tone}ToneLabel`]]}>
+            {getEventToneLabel(event)}
+          </Text>
           <Text style={styles.audience}>{getEventAudienceLabel(event)}</Text>
         </View>
-
         <Text style={styles.contact}>{event.contactName || event.title}</Text>
         <Text style={styles.title}>{event.title}</Text>
-        <Text style={styles.location}>{event.locationName || event.address || 'Location TBA'}</Text>
-
-        <View style={styles.actions}>
-          <Pressable onPress={openMaps} disabled={!event.address} style={styles.textButton}>
-            <Text style={[styles.textButtonLabel, !event.address && styles.disabledText]}>Maps</Text>
-          </Pressable>
+        <View style={styles.locationRow}>
+          <MapPin color={colors.onIvoryMuted} size={15} strokeWidth={1.8} />
+          <Text style={styles.location}>{event.locationName || event.address || 'Location to be announced'}</Text>
         </View>
+        {compact && event.address ? (
+          <Pressable onPress={openMaps} style={styles.mobileMapLink}>
+            <Text style={styles.mapText}>Open map</Text>
+            <ArrowUpRight color={colors.oxblood} size={16} strokeWidth={2} />
+          </Pressable>
+        ) : null}
       </View>
+
+      {event.isAnjumanSchedule ? (
+        <View style={styles.committedSeal}>
+          <Image
+            source={require('@/assets/images/pasban-logo-ui-black.png')}
+            style={styles.sealLogo}
+            resizeMode="contain"
+          />
+        </View>
+      ) : null}
+
+      {!compact ? (
+        <Pressable disabled={!event.address} onPress={openMaps} style={styles.mapLink}>
+          <ArrowUpRight
+            color={event.address ? colors.oxblood : colors.onIvoryLine}
+            size={20}
+            strokeWidth={2}
+          />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   board: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    ...shadows.medium,
+    backgroundColor: colors.ivory,
     borderRadius: radii.md,
-    borderWidth: 1,
     overflow: 'hidden',
   },
   boardHead: {
-    backgroundColor: colors.oxblood,
-    padding: spacing.lg,
+    borderBottomColor: colors.onIvoryLine,
+    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
-  boardHeadRow: {
-    alignItems: 'center',
+  boardTitleRow: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
     justifyContent: 'space-between',
   },
-  boardHeadCopy: {
+  boardTitleCopy: {
     flex: 1,
-    minWidth: 260,
+    minWidth: 220,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: typography.label,
-    fontWeight: '900',
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   heading: {
-    color: colors.ivory,
+    color: colors.onIvory,
+    fontFamily: fonts.displayMedium,
     fontSize: typography.display,
-    fontWeight: '900',
-    lineHeight: 39,
-    marginTop: spacing.sm,
-    maxWidth: 620,
+    lineHeight: 42,
+    marginTop: spacing.xs,
+  },
+  boardDescription: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
+    lineHeight: 20,
+    marginTop: spacing.xs,
   },
   submitButton: {
     alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.oxblood,
     borderRadius: radii.sm,
-    borderWidth: 1,
-    minHeight: 44,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 42,
     paddingHorizontal: spacing.md,
   },
   submitButtonText: {
-    color: colors.night,
+    color: colors.ivory,
+    fontFamily: fonts.bodyBold,
     fontSize: typography.small,
-    fontWeight: '900',
-    textTransform: 'uppercase',
   },
   filters: {
-    backgroundColor: colors.surfaceAlt,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: spacing.lg,
+    marginTop: spacing.lg,
   },
   filter: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderBottomColor: 'transparent',
+    borderBottomWidth: 2,
+    minHeight: 42,
+    justifyContent: 'center',
   },
   activeFilter: {
-    backgroundColor: colors.oxblood,
-    borderColor: colors.gold,
+    borderBottomColor: colors.oxblood,
   },
   filterText: {
-    color: colors.muted,
-    fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   activeFilterText: {
-    color: colors.ivory,
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
   },
   list: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.ivory,
   },
   row: {
     alignItems: 'flex-start',
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.onIvoryLine,
     borderBottomWidth: 1,
-    borderLeftWidth: 4,
     flexDirection: 'row',
+    gap: spacing.lg,
+    minHeight: 150,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    position: 'relative',
+  },
+  compactRow: {
     flexWrap: 'wrap',
-    gap: spacing.md,
-    padding: spacing.lg,
+    gap: spacing.sm,
+    minHeight: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
   },
-  committedRow: {
-    backgroundColor: colors.committedBg,
-    borderLeftColor: colors.committedBorder,
-  },
-  sistersRow: {
-    backgroundColor: colors.sistersBg,
-    borderLeftColor: colors.sistersBorder,
-  },
-  communityRow: {
-    backgroundColor: colors.communityBg,
-    borderLeftColor: colors.communityBorder,
+  lastRow: {
+    borderBottomWidth: 0,
   },
   timeColumn: {
     gap: spacing.xs,
-    width: 118,
+    width: 112,
+  },
+  compactTimeColumn: {
+    width: 88,
   },
   time: {
-    color: colors.red,
-    fontSize: typography.title,
-    fontWeight: '900',
-  },
-  committedTime: {
-    color: colors.gold,
-  },
-  sistersTime: {
-    color: colors.blue,
-  },
-  communityTime: {
-    color: '#75d39b',
+    color: colors.onIvory,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 24,
+    lineHeight: 28,
   },
   date: {
-    color: colors.muted,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
     fontSize: typography.small,
-    fontWeight: '700',
+    lineHeight: 18,
   },
   eventColumn: {
-    flexBasis: 260,
     flex: 1,
-    gap: spacing.xs,
-    minWidth: 0,
+    minWidth: 180,
   },
-  badgeRow: {
+  identityRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  badge: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+  toneMark: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
-  logoBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.night,
-    borderColor: 'rgba(212, 168, 60, .55)',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: 'center',
-    width: 34,
+  committedToneMark: {
+    backgroundColor: colors.goldDark,
   },
-  logo: {
-    height: 24,
-    width: 24,
+  sistersToneMark: {
+    backgroundColor: colors.blue,
   },
-  committedBadge: {
-    backgroundColor: 'rgba(217, 173, 67, .18)',
-    borderColor: colors.gold,
+  communityToneMark: {
+    backgroundColor: colors.green,
   },
-  sistersBadge: {
-    backgroundColor: 'rgba(117, 183, 230, .14)',
-    borderColor: colors.blue,
+  toneLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
   },
-  communityBadge: {
-    backgroundColor: 'rgba(47, 107, 77, .24)',
-    borderColor: colors.communityBorder,
+  committedToneLabel: {
+    color: colors.goldDark,
   },
-  badgeText: {
-    fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  sistersToneLabel: {
+    color: '#397994',
   },
-  committedBadgeText: {
-    color: colors.gold,
-  },
-  sistersBadgeText: {
-    color: colors.blue,
-  },
-  communityBadgeText: {
-    color: '#75d39b',
+  communityToneLabel: {
+    color: '#3e7659',
   },
   audience: {
-    color: colors.muted,
-    fontSize: typography.label,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.overline,
   },
   contact: {
-    color: colors.ink,
-    fontSize: typography.title,
-    fontWeight: '900',
+    color: colors.onIvory,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 26,
     lineHeight: 30,
     marginTop: spacing.xs,
   },
   title: {
-    color: colors.muted,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
     fontSize: typography.body,
-    fontWeight: '700',
     lineHeight: 22,
+    marginTop: 2,
+  },
+  locationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   location: {
-    color: colors.ink,
-    fontSize: typography.body,
-    lineHeight: 22,
+    color: colors.onIvoryMuted,
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
   },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-    justifyContent: 'flex-end',
-  },
-  textButton: {
-    minHeight: 36,
+  committedSeal: {
+    alignItems: 'center',
+    borderColor: colors.gold,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 44,
     justifyContent: 'center',
+    overflow: 'hidden',
+    width: 44,
   },
-  textButtonLabel: {
-    color: colors.red,
-    fontSize: typography.body,
-    fontWeight: '900',
-    textDecorationLine: 'underline',
+  sealLogo: {
+    height: 34,
+    width: 34,
   },
-  disabledText: {
-    color: colors.textSubtle,
+  mapLink: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  mobileMapLink: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    minHeight: 32,
+  },
+  mapText: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   empty: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: spacing.xl,
   },
   emptyTitle: {
-    color: colors.ink,
-    fontSize: typography.lead,
-    fontWeight: '900',
-    textAlign: 'center',
+    color: colors.onIvory,
+    fontFamily: fonts.displayMedium,
+    fontSize: typography.title,
   },
   emptyText: {
-    color: colors.muted,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
     fontSize: typography.body,
     marginTop: spacing.xs,
-    textAlign: 'center',
+  },
+  fullScheduleLink: {
+    alignItems: 'center',
+    backgroundColor: colors.ivoryRaised,
+    borderTopColor: colors.onIvoryLine,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 58,
+    paddingHorizontal: spacing.lg,
+  },
+  fullScheduleText: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
 });

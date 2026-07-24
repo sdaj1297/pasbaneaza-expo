@@ -1,42 +1,66 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Bell,
+  CalendarPlus,
+  Camera,
+  Globe2,
+  HandHeart,
+  MessageCircle,
+  Play,
+  Users,
+} from 'lucide-react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
-import { Card } from '@/components/Card';
 import { FormPicker } from '@/components/FormPicker';
-import { SectionTitle } from '@/components/SectionTitle';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { socialLinks } from '@/data/mock';
+import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import { PublicSubmissionType, submitPublicForm } from '@/lib/api';
-import { anjumanRequestOptions, buildDateOptions, buildTimeOptions, eventAudienceOptions } from '@/lib/eventFormOptions';
+import {
+  anjumanRequestOptions,
+  buildDateOptions,
+  buildTimeOptions,
+  eventAudienceOptions,
+} from '@/lib/eventFormOptions';
 
-const signupTypes: { type: PublicSubmissionType; title: string; description: string }[] = [
+const signupTypes: {
+  type: PublicSubmissionType;
+  title: string;
+  description: string;
+  icon: typeof Bell;
+}[] = [
   {
     type: 'event',
-    title: 'Submit New Event',
-    description: 'Send majlis or community program details for review before they appear publicly.',
+    title: 'Submit an event',
+    description: 'Send a majlis or community program for review.',
+    icon: CalendarPlus,
   },
   {
     type: 'reminder',
     title: 'Reminders',
-    description: 'Receive timely updates for majalis, juloos, livestreams, and special announcements.',
+    description: 'Receive program and livestream updates.',
+    icon: Bell,
   },
   {
     type: 'membership',
     title: 'Membership',
-    description: 'Join the Pasban-e-Aza community list and keep your family contact details current.',
+    description: 'Join or update your family membership.',
+    icon: Users,
   },
   {
     type: 'volunteer',
     title: 'Volunteer',
-    description: 'Help with programs, media, logistics, setup, cleanup, and community coordination.',
+    description: 'Help with programs, media, or logistics.',
+    icon: HandHeart,
   },
   {
     type: 'contact',
-    title: 'Contact',
-    description: 'Ask a question or send a note to the Pasban team.',
+    title: 'Contact Pasban',
+    description: 'Send a question or note to the team.',
+    icon: MessageCircle,
   },
 ];
 
@@ -57,6 +81,8 @@ type FormState = typeof initialForm;
 
 export default function ConnectScreen() {
   const params = useLocalSearchParams<{ intent?: string }>();
+  const width = useResponsiveWidth();
+  const compact = width < 700;
   const [selectedType, setSelectedType] = useState<PublicSubmissionType>('reminder');
   const [form, setForm] = useState<FormState>(initialForm);
   const [notice, setNotice] = useState('');
@@ -74,6 +100,33 @@ export default function ConnectScreen() {
     () => [{ label: 'Select Anjuman participation', value: '' }, ...anjumanRequestOptions],
     [],
   );
+  const selectedPath = signupTypes.find((item) => item.type === selectedType) || signupTypes[0];
+  const renderPathItems = (isCompact: boolean) => signupTypes.map((item) => {
+    const active = selectedType === item.type;
+    const Icon = item.icon;
+    return (
+      <Pressable
+        key={item.type}
+        onPress={() => setSelectedType(item.type)}
+        style={[
+          styles.pathItem,
+          isCompact && styles.compactPathItem,
+          active && styles.activePathItem,
+          active && isCompact && styles.activeCompactPathItem,
+        ]}
+      >
+        <Icon
+          color={active ? colors.gold : colors.textSubtle}
+          size={isCompact ? 18 : 20}
+          strokeWidth={active ? 2.2 : 1.8}
+        />
+        <View style={styles.pathCopy}>
+          <Text style={[styles.pathTitle, active && styles.activePathTitle]}>{item.title}</Text>
+          {!isCompact ? <Text style={styles.pathDescription}>{item.description}</Text> : null}
+        </View>
+      </Pressable>
+    );
+  });
 
   useEffect(() => {
     if (params.intent === 'event') setSelectedType('event');
@@ -137,7 +190,7 @@ export default function ConnectScreen() {
       });
 
       setNotice(result.status === 'pending_review'
-        ? 'Event submitted for review. It will not appear publicly until approved.'
+        ? 'Event submitted for review. It will appear publicly after approval.'
         : 'Submission received. Thank you.');
       setForm(initialForm);
     } catch {
@@ -148,261 +201,373 @@ export default function ConnectScreen() {
   };
 
   return (
-    <AppShell title="Connect" subtitle="Reminders, membership, volunteering, event submissions, and social channels">
-      <SectionTitle title="Choose A Path" />
-      <View style={styles.pathGrid}>
-        {signupTypes.map((item) => (
-          <Pressable
-            key={item.type}
-            onPress={() => setSelectedType(item.type)}
-            style={selectedType === item.type ? styles.activePathCard : styles.pathCard}
-          >
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-          </Pressable>
-        ))}
-      </View>
+    <AppShell title="Community" subtitle="Events, reminders, membership, volunteering, and contact">
+      <View style={styles.connectLayout}>
+        <View style={[styles.pathMenu, compact && styles.compactPathMenu]}>
+          <Text style={styles.pathEyebrow}>Choose a path</Text>
+          {compact ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.compactPathList}
+            >
+              {renderPathItems(true)}
+            </ScrollView>
+          ) : (
+            <View>{renderPathItems(false)}</View>
+          )}
 
-      <SectionTitle title={selectedType === 'event' ? 'Submit New Event' : 'Sign Up'} />
-      <Card>
-        <Text style={styles.lead}>
-          {selectedType === 'event'
-            ? 'Public event submissions go into pending review first. Once approved, they can appear in the schedule.'
-            : 'Tell us how you want to stay connected and someone from the team can follow up.'}
-        </Text>
-
-        <View style={styles.form}>
-          <TextInput
-            placeholder="Full name"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={form.name}
-            onChangeText={(value) => updateField('name', value)}
-          />
-          <TextInput
-            placeholder="Email address"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={form.email}
-            onChangeText={(value) => updateField('email', value)}
-          />
-          <TextInput
-            placeholder="Phone number"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            keyboardType="phone-pad"
-            value={form.phone}
-            onChangeText={(value) => updateField('phone', value)}
-          />
-
-          {selectedType === 'event' ? (
-            <>
-              <TextInput
-                placeholder="Event title, e.g. Majlis-e-Aza"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={form.eventTitle}
-                onChangeText={(value) => updateField('eventTitle', value)}
-              />
-              <View style={styles.inlineFields}>
-                <FormPicker label="Date" value={form.eventDate} options={dateOptions} onChange={(value) => updateField('eventDate', value)} />
-                <FormPicker label="Time" value={form.eventTime} options={timeOptions} onChange={(value) => updateField('eventTime', value)} />
-              </View>
-              <TextInput
-                placeholder="Event address"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={form.eventAddress}
-                onChangeText={(value) => updateField('eventAddress', value)}
-              />
-              <View style={styles.inlineFields}>
-                <FormPicker
-                  label="Event For"
-                  value={form.eventAudience}
-                  options={publicAudienceOptions}
-                  onChange={(value) => updateField('eventAudience', value)}
-                />
-                <FormPicker
-                  label="Anjuman Participation"
-                  value={form.requestsAnjuman}
-                  options={publicAnjumanOptions}
-                  onChange={(value) => updateField('requestsAnjuman', value)}
-                />
-              </View>
-              <Text style={styles.helperText}>
-                Anjuman participation is a request only. The program director can confirm availability after review.
-              </Text>
-            </>
-          ) : null}
-
-          <TextInput
-            placeholder={selectedType === 'event' ? 'Additional notes, contact person, speaker, flyer link, etc.' : 'Notes or interests'}
-            placeholderTextColor={colors.muted}
-            style={[styles.input, styles.textArea]}
-            multiline
-            value={form.message}
-            onChangeText={(value) => updateField('message', value)}
-          />
+          {!compact ? <View style={styles.socialList}>
+            <Text style={styles.pathEyebrow}>Elsewhere</Text>
+            {socialLinks.map((link) => {
+              const Icon = link.label === 'Instagram' ? Camera : link.label === 'YouTube' ? Play : Globe2;
+              return (
+                <Pressable key={link.label} onPress={() => Linking.openURL(link.url)} style={styles.socialLink}>
+                  <Icon color={colors.muted} size={17} strokeWidth={1.8} />
+                  <Text style={styles.socialLabel}>{link.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View> : null}
         </View>
 
-        <View style={styles.actionRow}>
-          <ActionButton onPress={submit}>{isSubmitting ? 'Submitting...' : selectedType === 'event' ? 'Submit For Review' : 'Submit Interest'}</ActionButton>
-          <ActionButton variant="outline" onPress={() => setSelectedType('contact')}>Contact Program Director</ActionButton>
-        </View>
-        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-      </Card>
+        <View style={styles.formSheet}>
+          <Text style={styles.formEyebrow}>{selectedPath.title}</Text>
+          <Text style={styles.formTitle}>
+            {selectedType === 'event' ? 'Add a program to the community calendar' : selectedPath.description}
+          </Text>
+          <Text style={styles.formIntro}>
+            {selectedType === 'event'
+              ? 'Submissions remain pending until the Pasban team confirms and publishes them.'
+              : 'Share your contact details and the Pasban team will follow up.'}
+          </Text>
 
-      <SectionTitle title="Social" />
-      <View style={styles.socialGrid}>
-        {socialLinks.map((link) => (
-          <Pressable key={link.label} onPress={() => Linking.openURL(link.url)} style={styles.socialCard}>
-            <Text style={styles.socialTitle}>{link.label}</Text>
-            <Text style={styles.socialUrl}>{link.url.replace('https://', '')}</Text>
-          </Pressable>
-        ))}
+          <View style={styles.form}>
+            <View style={styles.fieldRow}>
+              <LabeledInput
+                label="Full name"
+                required={selectedType === 'event'}
+                value={form.name}
+                onChangeText={(value) => updateField('name', value)}
+              />
+              <LabeledInput
+                label="Email address"
+                required={selectedType === 'event'}
+                value={form.email}
+                keyboardType="email-address"
+                onChangeText={(value) => updateField('email', value)}
+              />
+            </View>
+            <LabeledInput
+              label="Phone number"
+              required={selectedType === 'event'}
+              value={form.phone}
+              keyboardType="phone-pad"
+              onChangeText={(value) => updateField('phone', value)}
+            />
+
+            {selectedType === 'event' ? (
+              <>
+                <LabeledInput
+                  label="Event title"
+                  required
+                  placeholder="Majlis-e-Aza"
+                  value={form.eventTitle}
+                  onChangeText={(value) => updateField('eventTitle', value)}
+                />
+                <View style={styles.fieldRow}>
+                  <FormPicker
+                    label="Date · required"
+                    tone="light"
+                    value={form.eventDate}
+                    options={dateOptions}
+                    onChange={(value) => updateField('eventDate', value)}
+                  />
+                  <FormPicker
+                    label="Time · required"
+                    tone="light"
+                    value={form.eventTime}
+                    options={timeOptions}
+                    onChange={(value) => updateField('eventTime', value)}
+                  />
+                </View>
+                <LabeledInput
+                  label="Event address"
+                  required
+                  value={form.eventAddress}
+                  onChangeText={(value) => updateField('eventAddress', value)}
+                />
+                <View style={styles.fieldRow}>
+                  <FormPicker
+                    label="Event for · required"
+                    tone="light"
+                    value={form.eventAudience}
+                    options={publicAudienceOptions}
+                    onChange={(value) => updateField('eventAudience', value)}
+                  />
+                  <FormPicker
+                    label="Anjuman participation · required"
+                    tone="light"
+                    value={form.requestsAnjuman}
+                    options={publicAnjumanOptions}
+                    onChange={(value) => updateField('requestsAnjuman', value)}
+                  />
+                </View>
+                <Text style={styles.helperText}>
+                  Anjuman participation remains a request until the program director confirms availability.
+                </Text>
+              </>
+            ) : null}
+
+            <LabeledInput
+              label={selectedType === 'event' ? 'Additional notes' : 'Notes or interests'}
+              placeholder={selectedType === 'event' ? 'Contact person, speaker, flyer link, or other details' : ''}
+              value={form.message}
+              multiline
+              onChangeText={(value) => updateField('message', value)}
+            />
+          </View>
+
+          <View style={styles.actionRow}>
+            <ActionButton disabled={isSubmitting} variant="dark" onPress={submit}>
+              {isSubmitting ? 'Submitting...' : selectedType === 'event' ? 'Submit for review' : 'Send'}
+            </ActionButton>
+            {selectedType !== 'contact' ? (
+              <Pressable onPress={() => setSelectedType('contact')} style={styles.contactLink}>
+                <Text style={styles.contactLinkText}>Contact the program director</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+        </View>
       </View>
     </AppShell>
   );
 }
 
+function LabeledInput({
+  label,
+  required = false,
+  multiline = false,
+  placeholder,
+  value,
+  keyboardType,
+  onChangeText,
+}: {
+  label: string;
+  required?: boolean;
+  multiline?: boolean;
+  placeholder?: string;
+  value: string;
+  keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  onChangeText: (value: string) => void;
+}) {
+  return (
+    <View style={styles.inputField}>
+      <Text style={styles.inputLabel}>{label}{required ? ' · required' : ''}</Text>
+      <TextInput
+        placeholder={placeholder || label}
+        placeholderTextColor={colors.onIvoryMuted}
+        style={[styles.input, multiline && styles.textArea]}
+        value={value}
+        keyboardType={keyboardType}
+        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
+        multiline={multiline}
+        onChangeText={onChangeText}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  pathGrid: {
+  connectLayout: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xl,
+    marginTop: spacing.xl,
   },
-  pathCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexBasis: 220,
+  pathMenu: {
+    flexBasis: 280,
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  compactPathMenu: {
+    flexBasis: 'auto',
     flexGrow: 1,
-    padding: spacing.md,
+    width: '100%',
   },
-  activePathCard: {
-    backgroundColor: colors.redDark,
-    borderColor: colors.red,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexBasis: 220,
-    flexGrow: 1,
-    padding: spacing.md,
+  compactPathList: {
+    gap: spacing.xs,
+    paddingBottom: spacing.xs,
   },
-  cardTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
+  pathEyebrow: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
   },
-  description: {
-    color: colors.muted,
-    fontSize: typography.body,
-    lineHeight: 22,
-    marginTop: spacing.xs,
-  },
-  lead: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 24,
-  },
-  form: {
+  pathItem: {
+    alignItems: 'flex-start',
+    borderLeftColor: 'transparent',
+    borderLeftWidth: 2,
+    flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 48,
+    minHeight: 76,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  inlineFields: {
+  compactPathItem: {
+    alignItems: 'center',
+    borderBottomColor: 'transparent',
+    borderBottomWidth: 2,
+    borderLeftWidth: 0,
+    flexDirection: 'row',
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  activePathItem: {
+    backgroundColor: colors.surface,
+    borderLeftColor: colors.gold,
+  },
+  activeCompactPathItem: {
+    backgroundColor: 'transparent',
+    borderBottomColor: colors.gold,
+    borderLeftColor: 'transparent',
+  },
+  pathCopy: {
+    flex: 1,
+  },
+  pathTitle: {
+    color: colors.muted,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.body,
+  },
+  activePathTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+  },
+  pathDescription: {
+    color: colors.textSubtle,
+    fontFamily: fonts.body,
+    fontSize: typography.overline,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  socialList: {
+    borderTopColor: colors.borderSoft,
+    borderTopWidth: 1,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  socialLink: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 38,
+  },
+  socialLabel: {
+    color: colors.muted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
+  },
+  formSheet: {
+    ...shadows.medium,
+    backgroundColor: colors.ivory,
+    borderRadius: radii.md,
+    flex: 1,
+    flexBasis: 600,
+    minWidth: 0,
+    padding: spacing.xl,
+  },
+  formEyebrow: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  formTitle: {
+    color: colors.onIvory,
+    fontFamily: fonts.displayMedium,
+    fontSize: 34,
+    lineHeight: 38,
+    marginTop: spacing.xs,
+    maxWidth: 620,
+  },
+  formIntro: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginTop: spacing.sm,
+    maxWidth: 620,
+  },
+  form: {
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  fieldRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  inlineInput: {
+  inputField: {
+    flex: 1,
     flexBasis: 220,
-    flexGrow: 1,
+    gap: spacing.xs,
+  },
+  inputLabel: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.label,
+  },
+  input: {
+    backgroundColor: colors.ivoryRaised,
+    borderColor: colors.onIvoryLine,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    color: colors.onIvory,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 16,
+    minHeight: 50,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  textArea: {
+    minHeight: 112,
+    textAlignVertical: 'top',
   },
   helperText: {
-    color: colors.muted,
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
     fontSize: typography.small,
     lineHeight: 19,
   },
-  audienceRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  audienceButton: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 38,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  activeAudienceButton: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 38,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  audienceText: {
-    color: colors.ink,
-    fontWeight: '900',
-  },
-  activeAudienceText: {
-    color: colors.night,
-    fontWeight: '900',
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
   actionRow: {
+    alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  contactLink: {
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  contactLinkText: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   notice: {
-    color: colors.gold,
-    fontWeight: '800',
+    color: colors.oxblood,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 19,
     marginTop: spacing.md,
-  },
-  socialGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  socialCard: {
-    backgroundColor: colors.night,
-    borderColor: 'rgba(217, 173, 67, .35)',
-    borderRadius: 8,
-    borderWidth: 1,
-    minWidth: 220,
-    padding: spacing.md,
-  },
-  socialTitle: {
-    color: colors.gold,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  socialUrl: {
-    color: colors.ivory,
-    marginTop: spacing.xs,
   },
 });
