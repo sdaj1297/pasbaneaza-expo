@@ -36,6 +36,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "api": "node api/server.js",
+    "build:web": "expo export --platform web",
+    "serve": "node app.js",
     "db:migrate": "node api/scripts/migrate.js",
     "verify:api": "node api/scripts/verify-api.js"
   },

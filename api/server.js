@@ -1,5 +1,7 @@
 const cors = require('cors');
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const { pool } = require('./db');
@@ -11,7 +13,9 @@ const { createSubmission } = require('./services/submissionService');
 const { getDisplayDate, getHoustonDate, HOUSTON_TIME_ZONE } = require('./utils/dates');
 
 const app = express();
-const port = Number(process.env.PASBAN_API_PORT || 3001);
+const port = Number(process.env.PORT || process.env.PASBAN_API_PORT || 3001);
+const webDistPath = process.env.PASBAN_WEB_DIST || path.join(__dirname, '..', 'dist');
+const webIndexPath = path.join(webDistPath, 'index.html');
 
 app.use(cors());
 app.use(express.json({ limit: '32kb' }));
@@ -207,6 +211,22 @@ app.get('/api/home', async (_req, res, next) => {
   }
 });
 
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'API route not found.' });
+});
+
+if (fs.existsSync(webIndexPath)) {
+  app.use(express.static(webDistPath));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') {
+      next();
+      return;
+    }
+
+    res.sendFile(webIndexPath);
+  });
+}
+
 app.use((error, _req, res, _next) => {
   console.error(error);
   res.status(error.status || 500).json({
@@ -216,5 +236,5 @@ app.use((error, _req, res, _next) => {
 });
 
 app.listen(port, () => {
-  console.log(`Pasban API listening on http://localhost:${port}`);
+  console.log(`Pasban app listening on http://localhost:${port}`);
 });
