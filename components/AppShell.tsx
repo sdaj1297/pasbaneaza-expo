@@ -1,9 +1,10 @@
 import { PropsWithChildren } from 'react';
-import { Link, usePathname } from 'expo-router';
+import { Href, Link, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 type AppShellProps = PropsWithChildren<{
   title: string;
@@ -11,7 +12,14 @@ type AppShellProps = PropsWithChildren<{
   compact?: boolean;
 }>;
 
-const navItems = [
+type NavItem = {
+  href: Href;
+  label: string;
+  matchPath?: string;
+  isCta?: boolean;
+};
+
+const baseNavItems: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/events', label: 'Events' },
   { href: '/calendar', label: 'Calendar' },
@@ -19,17 +27,26 @@ const navItems = [
   { href: '/status', label: 'Status' },
   { href: '/connect', label: 'Connect' },
   { href: '/connect?intent=event', label: 'Submit Event', matchPath: '/submit-event', isCta: true },
-  { href: '/login', label: 'Login' },
-] as const;
+];
 
 export function AppShell({ title, subtitle, compact = false, children }: AppShellProps) {
   const pathname = usePathname();
   const [activePath, setActivePath] = useState('');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const showPageIntro = title !== 'Anjuman Pasban-e-Aza';
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    authUser?.isAdmin ? { href: '/admin', label: 'Admin' } : { href: '/login', label: 'Login' },
+  ];
 
   useEffect(() => {
     setActivePath(pathname);
   }, [pathname]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState(setAuthUser);
+    return unsubscribe;
+  }, []);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, compact && styles.compactContent]}>
@@ -45,12 +62,12 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
         {Platform.OS === 'web' ? (
           <View style={styles.nav}>
             {navItems.map((item) => {
-              const matchPath = 'matchPath' in item ? item.matchPath : item.href;
+              const matchPath = item.matchPath || String(item.href);
               const active = matchPath === '/' ? activePath === '/' : activePath.startsWith(matchPath);
               return (
-                <Link key={item.href} href={item.href} asChild>
-                  <Pressable style={'isCta' in item && item.isCta ? styles.navCta : active ? styles.activeNavItem : styles.navItem}>
-                    <Text style={['isCta' in item && item.isCta ? styles.navCtaText : styles.navText, active && styles.activeNavText]}>{item.label}</Text>
+                <Link key={String(item.href)} href={item.href} asChild>
+                  <Pressable style={item.isCta ? styles.navCta : active ? styles.activeNavItem : styles.navItem}>
+                    <Text style={[item.isCta ? styles.navCtaText : styles.navText, active && styles.activeNavText]}>{item.label}</Text>
                   </Pressable>
                 </Link>
               );

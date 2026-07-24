@@ -22,13 +22,18 @@ import {
 } from '@/lib/calendarUtils';
 import {
   fetchCalendarMonthFromFirebase,
+  fetchAdminEventsFromFirebase,
+  fetchAdminEventSubmissionsFromFirebase,
   fetchEventsFromFirebase,
   fetchHomeFromFirebase,
   fetchIslamicCalendarYearsFromFirebase,
   fetchPrayerTimesFromFirebase,
   fetchTodayMajlisFromFirebase,
   isFirebaseBackendEnabled,
+  createEventFromSubmissionInFirebase,
   submitPublicFormToFirebase,
+  updateAdminEventInFirebase,
+  updateEventSubmissionStatusInFirebase,
   updateIslamicMonthLengthInFirebase,
   updateMajlisStatusInFirebase,
 } from '@/lib/firebaseData';
@@ -98,6 +103,28 @@ export type PublicSubmissionResult = {
   id: string;
   type: PublicSubmissionType;
   status: 'new' | 'pending_review' | string;
+};
+
+export type AdminSubmissionStatus =
+  | 'new'
+  | 'pending_review'
+  | 'placeholder_created'
+  | 'approved'
+  | 'dismissed'
+  | string;
+
+export type AdminEventSubmission = {
+  id: string;
+  type: PublicSubmissionType;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  payload: Record<string, unknown>;
+  source: string;
+  status: AdminSubmissionStatus;
+  createdAt?: string;
+  reviewedAt?: string;
 };
 
 const fallbackHome: HomePayload = {
@@ -225,6 +252,59 @@ export async function submitPublicForm(input: PublicSubmissionInput): Promise<Pu
   };
   const result = await sendJson<{ submission: PublicSubmissionResult }>(`/forms/${input.type}`, input, { submission: fallback });
   return result.submission;
+}
+
+export async function fetchAdminEventSubmissions(): Promise<AdminEventSubmission[]> {
+  if (isFirebaseBackendEnabled()) return fetchAdminEventSubmissionsFromFirebase();
+
+  const result = await request<{ submissions: AdminEventSubmission[] }>('/admin/event-submissions', { submissions: [] });
+  return result.submissions;
+}
+
+export async function fetchAdminEvents(): Promise<CommunityEvent[]> {
+  if (isFirebaseBackendEnabled()) return fetchAdminEventsFromFirebase();
+
+  const result = await request<{ events: CommunityEvent[] }>('/admin/events', { events });
+  return result.events;
+}
+
+export async function updateEventSubmissionStatus(submissionId: string, status: AdminSubmissionStatus): Promise<void> {
+  if (isFirebaseBackendEnabled()) return updateEventSubmissionStatusInFirebase(submissionId, status);
+
+  await sendJson(`/admin/event-submissions/${submissionId}`, { status }, {}, 'PATCH');
+}
+
+export async function createEventFromSubmission(
+  submission: AdminEventSubmission,
+  mode: 'placeholder' | 'publish',
+): Promise<CommunityEvent> {
+  if (isFirebaseBackendEnabled()) return createEventFromSubmissionInFirebase(submission, mode);
+
+  const fallback = events[0];
+  const result = await sendJson<{ event: CommunityEvent }>(
+    `/admin/event-submissions/${submission.id}/${mode}`,
+    submission,
+    { event: fallback },
+    'POST',
+  );
+  return result.event;
+}
+
+export async function updateAdminEvent(
+  eventId: string,
+  originalDate: string,
+  patch: Partial<CommunityEvent>,
+): Promise<CommunityEvent> {
+  if (isFirebaseBackendEnabled()) return updateAdminEventInFirebase(eventId, originalDate, patch);
+
+  const fallback = events.find((event) => event.id === eventId) || events[0];
+  const result = await sendJson<{ event: CommunityEvent }>(
+    `/admin/events/${eventId}`,
+    { originalDate, ...patch },
+    { event: { ...fallback, ...patch } },
+    'PATCH',
+  );
+  return result.event;
 }
 
 function matchesFilter(event: CommunityEvent, filter: CalendarFilter) {

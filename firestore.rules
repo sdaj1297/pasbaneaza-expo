@@ -30,16 +30,16 @@ service cloud.firestore {
 
     match /events/{eventId} {
       allow read: if true;
-      allow write: if false;
+      allow create, update, delete: if isAdmin();
     }
 
     match /eventDays/{date} {
       allow read: if true;
-      allow write: if false;
+      allow create, update, delete: if isAdmin();
 
       match /items/{eventId} {
         allow read: if true;
-        allow write: if false;
+        allow create, update, delete: if isAdmin();
       }
     }
 
@@ -119,7 +119,7 @@ service cloud.firestore {
           )
         );
 
-      allow read, update, delete: if false;
+      allow read, update, delete: if isAdmin();
     }
   }
 }

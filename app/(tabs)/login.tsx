@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -6,7 +6,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
 import { colors, spacing } from '@/constants/theme';
-import { isAuthEnabled, loginWithEmail, sendLoginReset } from '@/lib/auth';
+import { isAuthEnabled, loginWithEmail, sendLoginReset, subscribeToAuthState } from '@/lib/auth';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -14,6 +14,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [notice, setNotice] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState((user) => {
+      if (user?.isAdmin) router.replace('/admin');
+    });
+    return unsubscribe;
+  }, [router]);
 
   const login = async () => {
     setNotice('');

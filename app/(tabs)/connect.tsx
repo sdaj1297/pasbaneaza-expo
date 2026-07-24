@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
+import { FormPicker } from '@/components/FormPicker';
 import { SectionTitle } from '@/components/SectionTitle';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { socialLinks } from '@/data/mock';
 import { PublicSubmissionType, submitPublicForm } from '@/lib/api';
+import { anjumanRequestOptions, buildDateOptions, buildTimeOptions, eventAudienceOptions } from '@/lib/eventFormOptions';
 
 const signupTypes: { type: PublicSubmissionType; title: string; description: string }[] = [
   {
@@ -48,6 +50,7 @@ const initialForm = {
   eventTime: '',
   eventAddress: '',
   eventAudience: 'Family',
+  requestsAnjuman: 'no',
 };
 
 type FormState = typeof initialForm;
@@ -58,6 +61,8 @@ export default function ConnectScreen() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [notice, setNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dateOptions = useMemo(() => [{ label: 'Select date', value: '' }, ...buildDateOptions()], []);
+  const timeOptions = useMemo(() => buildTimeOptions(), []);
 
   useEffect(() => {
     if (params.intent === 'event') setSelectedType('event');
@@ -96,6 +101,9 @@ export default function ConnectScreen() {
               eventTime: form.eventTime,
               eventAddress: form.eventAddress,
               eventAudience: form.eventAudience,
+              requestsAnjuman: form.requestsAnjuman === 'yes',
+              addToSchedule: form.requestsAnjuman === 'yes',
+              ADDTOSCHD: form.requestsAnjuman === 'yes',
               reviewStatus: 'pending_review',
             }
           : {
@@ -174,20 +182,8 @@ export default function ConnectScreen() {
                 onChangeText={(value) => updateField('eventTitle', value)}
               />
               <View style={styles.inlineFields}>
-                <TextInput
-                  placeholder="Date, e.g. 2026-07-25"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, styles.inlineInput]}
-                  value={form.eventDate}
-                  onChangeText={(value) => updateField('eventDate', value)}
-                />
-                <TextInput
-                  placeholder="Time, e.g. 7:30 PM"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, styles.inlineInput]}
-                  value={form.eventTime}
-                  onChangeText={(value) => updateField('eventTime', value)}
-                />
+                <FormPicker label="Date" value={form.eventDate} options={dateOptions} onChange={(value) => updateField('eventDate', value)} />
+                <FormPicker label="Time" value={form.eventTime} options={timeOptions} onChange={(value) => updateField('eventTime', value)} />
               </View>
               <TextInput
                 placeholder="Event address"
@@ -196,17 +192,23 @@ export default function ConnectScreen() {
                 value={form.eventAddress}
                 onChangeText={(value) => updateField('eventAddress', value)}
               />
-              <View style={styles.audienceRow}>
-                {['Family', 'Brothers', 'Sisters'].map((item) => (
-                  <Pressable
-                    key={item}
-                    onPress={() => updateField('eventAudience', item)}
-                    style={form.eventAudience === item ? styles.activeAudienceButton : styles.audienceButton}
-                  >
-                    <Text style={form.eventAudience === item ? styles.activeAudienceText : styles.audienceText}>{item}</Text>
-                  </Pressable>
-                ))}
+              <View style={styles.inlineFields}>
+                <FormPicker
+                  label="Event For"
+                  value={form.eventAudience}
+                  options={eventAudienceOptions}
+                  onChange={(value) => updateField('eventAudience', value)}
+                />
+                <FormPicker
+                  label="Anjuman Participation"
+                  value={form.requestsAnjuman}
+                  options={anjumanRequestOptions}
+                  onChange={(value) => updateField('requestsAnjuman', value)}
+                />
               </View>
+              <Text style={styles.helperText}>
+                Anjuman participation is a request only. The program director can confirm availability after review.
+              </Text>
             </>
           ) : null}
 
@@ -304,6 +306,11 @@ const styles = StyleSheet.create({
   inlineInput: {
     flexBasis: 220,
     flexGrow: 1,
+  },
+  helperText: {
+    color: colors.muted,
+    fontSize: typography.small,
+    lineHeight: 19,
   },
   audienceRow: {
     flexDirection: 'row',

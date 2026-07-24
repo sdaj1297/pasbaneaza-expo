@@ -16,6 +16,7 @@ export type CommunityEvent = {
   isAnjumanSchedule: boolean;
   isPublished: boolean;
   waitingApproval: boolean;
+  isPlaceholder?: boolean;
 };
 
 export type PrayerTime = {

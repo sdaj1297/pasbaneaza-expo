@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -9,6 +10,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 
 import {
@@ -39,7 +41,13 @@ import {
 import type { DocumentData } from 'firebase/firestore';
 import type { HomePayload } from '@/lib/api';
 import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
-import type { PublicSubmissionInput, PublicSubmissionResult } from '@/lib/api';
+import type {
+  AdminEventSubmission,
+  AdminSubmissionStatus,
+  PublicSubmissionInput,
+  PublicSubmissionResult,
+} from '@/lib/api';
+import { audienceToEventType } from '@/lib/eventFormOptions';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
@@ -298,6 +306,132 @@ export async function submitPublicFormToFirebase(input: PublicSubmissionInput): 
   };
 }
 
+export async function fetchAdminEventSubmissionsFromFirebase(): Promise<AdminEventSubmission[]> {
+  if (!isFirebaseBackendEnabled()) return [];
+
+  try {
+    const db = getFirebaseDb();
+    const snapshot = await getDocs(query(collection(db, 'submissions'), orderBy('createdAt', 'desc'), limit(120)));
+    return snapshot.docs
+      .map((submissionDoc) => normalizeSubmission(submissionDoc.id, submissionDoc.data()))
+      .filter((submission) => submission.type === 'event');
+  } catch (error) {
+    console.warn('Unable to load admin event submissions from Firestore.', error);
+    return [];
+  }
+}
+
+export async function fetchAdminEventsFromFirebase(): Promise<CommunityEvent[]> {
+  if (!isFirebaseBackendEnabled()) return fallbackEvents;
+
+  try {
+    const db = getFirebaseDb();
+    const snapshot = await getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS)));
+    const today = getHoustonDate();
+    return snapshot.docs
+      .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
+      .filter((event) => event.date >= today)
+      .sort(compareEvents);
+  } catch (error) {
+    console.warn('Unable to load admin events from Firestore.', error);
+    return fallbackEvents;
+  }
+}
+
+export async function updateEventSubmissionStatusInFirebase(
+  submissionId: string,
+  status: AdminSubmissionStatus,
+): Promise<void> {
+  if (!isFirebaseBackendEnabled()) return;
+
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, 'submissions', submissionId), {
+    status,
+    reviewedAt: serverTimestamp(),
+  });
+}
+
+export async function createEventFromSubmissionInFirebase(
+  submission: AdminEventSubmission,
+  mode: 'placeholder' | 'publish',
+): Promise<CommunityEvent> {
+  if (!isFirebaseBackendEnabled()) {
+    return fallbackEvents[0];
+  }
+
+  const payload = submission.payload || {};
+  const eventId = `${mode}-${submission.id}`;
+  const event: CommunityEvent = {
+    id: eventId,
+    title: stringOrUndefined(payload.eventTitle) || 'Majlis',
+    contactName: submission.name || stringOrUndefined(payload.contactName) || 'Contact pending',
+    date: normalizeDate(payload.eventDate),
+    time: String(payload.eventTime || ''),
+    islamicDate: '',
+    type: audienceToEventType(String(payload.eventAudience || 'Family')),
+    locationName: 'Residence',
+    address: String(payload.eventAddress || ''),
+    flyer: stringOrUndefined(payload.flyerUrl),
+    socialUrl: stringOrUndefined(payload.socialUrl),
+    isAnjumanSchedule: Boolean(payload.requestsAnjuman || payload.addToSchedule || payload.ADDTOSCHD),
+    isPublished: true,
+    waitingApproval: mode === 'placeholder',
+    isPlaceholder: mode === 'placeholder',
+  };
+
+  await writeEvent(event, submission.payload?.eventDate ? String(submission.payload.eventDate) : undefined);
+  await updateEventSubmissionStatusInFirebase(
+    submission.id,
+    mode === 'placeholder' ? 'placeholder_created' : 'approved',
+  );
+
+  return event;
+}
+
+export async function updateAdminEventInFirebase(
+  eventId: string,
+  originalDate: string,
+  patch: Partial<CommunityEvent>,
+): Promise<CommunityEvent> {
+  if (!isFirebaseBackendEnabled()) {
+    const fallback = fallbackEvents.find((event) => event.id === eventId) || fallbackEvents[0];
+    return { ...fallback, ...patch };
+  }
+
+  const db = getFirebaseDb();
+  const currentSnapshot = await getDoc(doc(db, 'events', eventId));
+  const currentEvent = currentSnapshot.exists()
+    ? normalizeEvent(eventId, currentSnapshot.data())
+    : ({ id: eventId, ...patch } as CommunityEvent);
+  const nextEvent: CommunityEvent = {
+    ...currentEvent,
+    ...patch,
+    id: eventId,
+    date: normalizeDate(patch.date || currentEvent.date),
+    time: String(patch.time ?? currentEvent.time ?? ''),
+  };
+
+  await writeEvent(nextEvent, originalDate);
+  return nextEvent;
+}
+
+async function writeEvent(event: CommunityEvent, originalDate?: string): Promise<void> {
+  const db = getFirebaseDb();
+  const eventPayload = serializeEvent(event);
+
+  await setDoc(doc(db, 'events', event.id), eventPayload, { merge: true });
+  await setDoc(doc(db, 'eventDays', event.date), {
+    date: event.date,
+    source: 'admin',
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  await setDoc(doc(db, 'eventDays', event.date, 'items', event.id), eventPayload, { merge: true });
+
+  if (originalDate && originalDate !== event.date) {
+    await deleteDoc(doc(db, 'eventDays', originalDate, 'items', event.id));
+  }
+}
+
 async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]> {
   if (!isFirebaseBackendEnabled()) return fallbackIslamicEvents;
 
@@ -379,6 +513,49 @@ function normalizeEvent(id: string, data: DocumentData): CommunityEvent {
     isAnjumanSchedule: Boolean(data.isAnjumanSchedule ?? data.addToSchedule ?? data.ADDTOSCHD),
     isPublished: data.isPublished !== false && data.publish !== false && data.PUBLISH !== 0,
     waitingApproval: Boolean(data.waitingApproval || data.WAITING_APPROVAL),
+    isPlaceholder: Boolean(data.isPlaceholder || data.placeholder || data.PLACE_HOLDER),
+  };
+}
+
+function normalizeSubmission(id: string, data: DocumentData): AdminEventSubmission {
+  return {
+    id,
+    type: String(data.type || 'contact') as AdminEventSubmission['type'],
+    name: String(data.name || ''),
+    email: String(data.email || ''),
+    phone: String(data.phone || ''),
+    message: String(data.message || ''),
+    payload: isRecord(data.payload) ? data.payload : {},
+    source: String(data.source || ''),
+    status: String(data.status || 'new') as AdminSubmissionStatus,
+    createdAt: normalizeTimestamp(data.createdAt),
+    reviewedAt: normalizeTimestamp(data.reviewedAt),
+  };
+}
+
+function serializeEvent(event: CommunityEvent): Record<string, unknown> {
+  return {
+    id: event.id,
+    eventId: event.id,
+    title: event.title || 'Majlis',
+    contactName: event.contactName || event.title || 'Contact pending',
+    date: event.date,
+    time: event.time || '',
+    sortTime: toSortTime(event.time || ''),
+    islamicDate: event.islamicDate || '',
+    type: event.type || 'M',
+    locationName: event.locationName || '',
+    address: event.address || '',
+    flyer: event.flyer || '',
+    socialUrl: event.socialUrl || '',
+    isAnjumanSchedule: Boolean(event.isAnjumanSchedule),
+    addToSchedule: Boolean(event.isAnjumanSchedule),
+    isPublished: event.isPublished !== false,
+    publish: event.isPublished !== false,
+    waitingApproval: Boolean(event.waitingApproval),
+    isPlaceholder: Boolean(event.isPlaceholder),
+    source: 'admin',
+    updatedAt: serverTimestamp(),
   };
 }
 
@@ -489,4 +666,33 @@ function getDisplayDate(date: string) {
     year: 'numeric',
     timeZone: 'UTC',
   });
+}
+
+function normalizeTimestamp(value: unknown) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    return value.toDate().toISOString();
+  }
+  return String(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toSortTime(time: string) {
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time || '99:99';
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const suffix = match[3].toUpperCase();
+  const hour24 = suffix === 'PM' && hour !== 12 ? hour + 12 : suffix === 'AM' && hour === 12 ? 0 : hour;
+  return `${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function compareEvents(left: CommunityEvent, right: CommunityEvent) {
+  const leftKey = `${left.date} ${toSortTime(left.time)}`;
+  const rightKey = `${right.date} ${toSortTime(right.time)}`;
+  return leftKey.localeCompare(rightKey);
 }
