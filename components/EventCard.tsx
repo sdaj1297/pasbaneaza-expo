@@ -4,6 +4,7 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { colors, fonts, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
+import { formatGregorianDate } from '@/lib/datePresentation';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 type EventCardProps = {
@@ -29,7 +30,8 @@ export function EventCard({
     <View style={[styles.row, isLast && styles.lastRow]}>
       <View style={styles.dateColumn}>
         <Text style={styles.time}>{event.time || 'TBA'}</Text>
-        <Text style={styles.date}>{event.islamicDate || event.date || 'Date pending'}</Text>
+        <Text style={styles.gregorianDate}>{formatGregorianDate(event.date)}</Text>
+        <Text style={styles.islamicDate}>{event.islamicDate || 'Hijri date pending'}</Text>
       </View>
 
       <View style={styles.eventCopy}>
@@ -107,12 +109,19 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 29,
   },
-  date: {
-    color: colors.onIvoryMuted,
-    fontFamily: fonts.bodyMedium,
+  gregorianDate: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
     lineHeight: 18,
     marginTop: spacing.xs,
+  },
+  islamicDate: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+    lineHeight: 16,
+    marginTop: 2,
   },
   eventCopy: {
     flex: 1,

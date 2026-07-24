@@ -4,22 +4,22 @@ import {
   events,
   islamicCalendarYears,
   islamicEvents,
-  islamicTodayLabel,
   prayerTimes,
   PrayerTime,
   specialEvent,
   SpecialEvent,
   statusItems,
   StatusItem,
-  todayLabel,
 } from '@/data/mock';
 import {
   buildCalendarMonth,
+  calculateIslamicDate,
   CalendarFilter,
   CalendarMonthPayload,
   getHoustonDate,
   IslamicCalendarYear,
 } from '@/lib/calendarUtils';
+import { formatGregorianDate } from '@/lib/datePresentation';
 import {
   fetchCalendarMonthFromFirebase,
   fetchAdminEventFromFirebase,
@@ -135,11 +135,12 @@ export type AdminEventReviewInput = {
   isPlaceholder: boolean;
 };
 
+const fallbackToday = getHoustonDate();
 const fallbackHome: HomePayload = {
-  date: '',
-  label: todayLabel,
+  date: fallbackToday,
+  label: formatGregorianDate(fallbackToday, 'hero'),
   timezone: 'America/Chicago',
-  islamicDate: { day: 13, month: 1, monthName: 'Muharram', year: 1448, label: islamicTodayLabel },
+  islamicDate: calculateIslamicDate(fallbackToday, islamicCalendarYears),
   islamicEvents: [],
   announcements: [],
   featuredAnnouncement: null,

@@ -31,6 +31,7 @@ import {
   getHoustonDate,
   syncEventsToDeviceCalendar,
 } from '@/lib/calendarUtils';
+import { formatCompactIslamicDate } from '@/lib/datePresentation';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 const filterOptions: { label: string; value: CalendarFilter }[] = [
@@ -231,11 +232,11 @@ function CalendarCell({
         </Text>
         {day.isToday ? <View style={styles.todayDot} /> : null}
       </View>
-      {!compact ? (
-        <Text numberOfLines={1} style={styles.hijriText}>
-          {day.islamicDate?.label || 'Hijri pending'}
-        </Text>
-      ) : null}
+      <Text numberOfLines={1} style={[styles.hijriText, compact && styles.compactHijriText]}>
+        {compact
+          ? formatCompactIslamicDate(day.islamicDate)
+          : day.islamicDate?.label || 'Hijri pending'}
+      </Text>
       {day.islamicEvents.length && !compact ? (
         <Text numberOfLines={1} style={styles.observanceText}>
           {day.islamicEvents[0].title}
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   compactDayCell: {
-    minHeight: 70,
+    minHeight: 76,
     padding: spacing.xs,
   },
   offMonthCell: {
@@ -536,6 +537,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 9,
     marginTop: 2,
+  },
+  compactHijriText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 9,
+    lineHeight: 12,
+    minHeight: 12,
   },
   observanceText: {
     color: colors.oxblood,

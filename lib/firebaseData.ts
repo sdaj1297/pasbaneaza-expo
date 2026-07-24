@@ -19,7 +19,6 @@ import {
   events as fallbackEvents,
   islamicCalendarYears as fallbackIslamicCalendarYears,
   islamicEvents as fallbackIslamicEvents,
-  islamicTodayLabel,
   MajlisStatus,
   prayerTimes as fallbackPrayerTimes,
   PrayerTime,
@@ -27,10 +26,10 @@ import {
   SpecialEvent,
   statusItems as fallbackStatusItems,
   StatusItem,
-  todayLabel,
 } from '@/data/mock';
 import {
   buildCalendarMonth,
+  calculateIslamicDate,
   CalendarFilter,
   CalendarMonthPayload,
   getMonthRange,
@@ -65,10 +64,14 @@ export async function fetchEventsFromFirebase(
 
   try {
     const db = getFirebaseDb();
-    const snapshot = await getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS)));
+    const [snapshot, calendarYears] = await Promise.all([
+      getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS))),
+      fetchIslamicCalendarYearsFromFirebase(),
+    ]);
     const from = options.from || getHoustonDate();
     const events = snapshot.docs
       .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
+      .map((event) => withCalculatedIslamicDate(event, calendarYears))
       .filter(isPublicEvent)
       .filter((event) => event.date >= from)
       .filter((event) => !options.to || event.date <= options.to)
@@ -119,17 +122,18 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
   try {
     const db = getFirebaseDb();
     const today = getHoustonDate();
-    const [homeDoc, bannerSnapshot, events] = await Promise.all([
+    const [homeDoc, bannerSnapshot, events, calendarYears] = await Promise.all([
       getDoc(doc(db, 'settings', 'home')),
       getDocs(query(collection(db, 'banners'), limit(20))),
       fetchEventsFromFirebase('anjuman'),
+      fetchIslamicCalendarYearsFromFirebase(),
     ]);
 
     const home = homeDoc.exists() ? homeDoc.data() : {};
     const activeBanner = bannerSnapshot.docs
       .map((bannerDoc) => normalizeBanner(bannerDoc.id, bannerDoc.data(), today))
       .find((banner) => banner.isActive);
-    const islamicDate = normalizeIslamicDate(home.islamicDate);
+    const islamicDate = calculateIslamicDate(today, calendarYears);
     const upcomingEvents = events.slice(0, 6);
 
     return {
@@ -462,11 +466,12 @@ async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]>
 }
 
 function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
+  const today = getHoustonDate();
   return {
-    date: '',
-    label: todayLabel,
+    date: today,
+    label: getDisplayDate(today),
     timezone: HOUSTON_TIME_ZONE,
-    islamicDate: { day: 13, month: 1, monthName: 'Muharram', year: 1448, label: islamicTodayLabel },
+    islamicDate: calculateIslamicDate(today, fallbackIslamicCalendarYears),
     islamicEvents: [],
     announcements: [],
     featuredAnnouncement: null,
@@ -529,6 +534,17 @@ function normalizeEvent(id: string, data: DocumentData): CommunityEvent {
     isPublished: data.isPublished !== false && data.publish !== false && data.PUBLISH !== 0,
     waitingApproval: Boolean(data.waitingApproval || data.WAITING_APPROVAL),
     isPlaceholder: Boolean(data.isPlaceholder || data.placeholder || data.PLACE_HOLDER),
+  };
+}
+
+function withCalculatedIslamicDate(
+  event: CommunityEvent,
+  calendarYears: IslamicCalendarYear[],
+): CommunityEvent {
+  const islamicDate = calculateIslamicDate(event.date, calendarYears);
+  return {
+    ...event,
+    islamicDate: islamicDate?.label || event.islamicDate,
   };
 }
 
@@ -601,18 +617,6 @@ function normalizePrayerTimes(value: unknown): PrayerTime[] {
     .filter((item) => item.label && item.time);
 
   return times.length ? times : fallbackPrayerTimes;
-}
-
-function normalizeIslamicDate(value: unknown): HomePayload['islamicDate'] {
-  if (!value || typeof value !== 'object') return null;
-  const data = value as Record<string, unknown>;
-  return {
-    day: Number(data.day || 0),
-    month: Number(data.month || 0),
-    monthName: String(data.monthName || ''),
-    year: Number(data.year || 0),
-    label: String(data.label || ''),
-  };
 }
 
 function isPublicEvent(event: CommunityEvent) {

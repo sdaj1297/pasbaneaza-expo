@@ -39,6 +39,7 @@ import {
 import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import { fetchEvents, fetchHome, fetchTodayMajlis } from '@/lib/api';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
+import { formatGregorianDate, getRelativeDateLabel } from '@/lib/datePresentation';
 import {
   filterUpcomingEvents,
   isActiveMajlis,
@@ -112,6 +113,16 @@ export default function HomeScreen() {
   );
   const nextAnjuman = selectNextCommittedEvent(mergedEvents, liveStatuses, clock);
   const nextAnjumanIsActive = nextAnjuman ? isActiveMajlis(nextAnjuman.id, liveStatuses) : false;
+  const nextDateRelation = nextAnjuman
+    ? getRelativeDateLabel(nextAnjuman.date, currentDate)
+    : '';
+  const nextMajlisLabel = nextAnjumanIsActive
+    ? 'Current committed majlis'
+    : nextDateRelation === 'Today'
+      ? 'Later today'
+      : nextDateRelation === 'Tomorrow'
+        ? "Tomorrow's committed majlis"
+        : 'Next committed majlis';
   const hasRealFlyer = Boolean(featured.isActive && featured.flyerUrl);
   const hasLiveStream = Boolean(
     featured.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
@@ -132,11 +143,20 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
-            <Text style={styles.nextLabel}>
-              {nextAnjumanIsActive ? 'Current committed majlis' : 'Next committed majlis'}
-            </Text>
+            <Text style={styles.nextLabel}>{nextMajlisLabel}</Text>
             {nextAnjuman ? (
               <>
+                <View style={styles.nextDateRow}>
+                  <CalendarDays color={colors.gold} size={16} strokeWidth={1.8} />
+                  <View style={styles.nextDateCopy}>
+                    <Text style={styles.nextGregorianDate}>
+                      {formatGregorianDate(nextAnjuman.date, 'long')}
+                    </Text>
+                    {nextAnjuman.islamicDate ? (
+                      <Text style={styles.nextIslamicDate}>{nextAnjuman.islamicDate}</Text>
+                    ) : null}
+                  </View>
+                </View>
                 <View style={styles.nextTitleRow}>
                   <Text style={styles.nextTime}>{nextAnjuman.time || 'TBA'}</Text>
                   <View style={styles.nextRule} />
@@ -423,12 +443,34 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     textTransform: 'uppercase',
   },
+  nextDateRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  nextDateCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  nextGregorianDate: {
+    color: colors.ink,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 18,
+  },
+  nextIslamicDate: {
+    color: colors.goldSoft,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+    lineHeight: 16,
+  },
   nextTitleRow: {
     alignItems: 'baseline',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   nextTime: {
     color: colors.ink,

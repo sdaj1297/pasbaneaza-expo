@@ -12,6 +12,7 @@ import {
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
 import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
+import { formatGregorianDate } from '@/lib/datePresentation';
 import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 export type HomeScheduleFilter = 'all' | 'anjuman' | 'brothers' | 'sisters' | 'family';
@@ -126,7 +127,8 @@ function ScheduleRow({
     <View style={[styles.row, compact && styles.compactRow, isLast && styles.lastRow]}>
       <View style={[styles.timeColumn, compact && styles.compactTimeColumn]}>
         <Text style={styles.time}>{event.time || 'TBA'}</Text>
-        <Text style={styles.date}>{event.islamicDate || event.date}</Text>
+        <Text style={styles.gregorianDate}>{formatGregorianDate(event.date)}</Text>
+        <Text style={styles.islamicDate}>{event.islamicDate || 'Hijri date pending'}</Text>
       </View>
 
       <View style={styles.eventColumn}>
@@ -307,11 +309,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
   },
-  date: {
-    color: colors.onIvoryMuted,
-    fontFamily: fonts.bodyMedium,
+  gregorianDate: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
     lineHeight: 18,
+  },
+  islamicDate: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+    lineHeight: 16,
   },
   eventColumn: {
     flex: 1,

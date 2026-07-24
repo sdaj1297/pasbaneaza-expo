@@ -95,6 +95,8 @@ Test:
 - Confirm the homepage immediately shows schedule/event information.
 - Check any featured banner or special event area if one is active.
 - Confirm upcoming events look accurate and readable.
+- Compare today's Hijri date with the Calendar page for the same Gregorian day.
+- Confirm the next committed majlis says whether it is later today, tomorrow, or on a future date.
 - Mark today's committed event Completed and confirm it leaves both the next-majlis area and upcoming list.
 - Confirm a later committed event becomes the next majlis.
 - Open the page on mobile and desktop.
@@ -103,6 +105,9 @@ Pass:
 
 - The schedule is easy to find without excessive scrolling.
 - Event names, dates, times, and labels are readable.
+- The next majlis includes its full Gregorian date and Hijri date.
+- Every upcoming event shows both its Gregorian date and Hijri date.
+- Today's Hijri date matches the admin-adjustable calendar mapping.
 - Completed, skipped, and elapsed same-day events are not presented as next/upcoming.
 - Started or En Route events are labeled as the current committed majlis.
 - Featured flyer/banner does not hide the schedule.
@@ -144,7 +149,8 @@ Pass:
 - The calendar renders as a complete month.
 - Event chips appear on the correct date.
 - Anjuman events are visually distinct.
-- Hijri dates appear for calendar days.
+- A compact Hijri day and month appear inside every calendar cell, including on mobile.
+- The selected day's full Hijri date agrees with the compact date in its calendar cell.
 - Islamic observances appear where expected.
 - Mobile layout remains readable without horizontal scrolling.
 
