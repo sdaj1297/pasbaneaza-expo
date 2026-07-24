@@ -1,6 +1,6 @@
 {
   "name": "pasbaneaza-expo",
-  "main": "app.js",
+  "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
     "cors": "^2.8.6",
@@ -24,7 +24,8 @@
     "react-native-screens": "4.25.2",
     "react-native-web": "~0.21.0",
     "react-native-webview": "13.16.1",
-    "react-native-worklets": "0.8.3"
+    "react-native-worklets": "0.8.3",
+    "serverless-http": "^4.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

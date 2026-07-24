@@ -235,6 +235,14 @@ app.use((error, _req, res, _next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Pasban app listening on http://localhost:${port}`);
-});
+function start() {
+  app.listen(port, () => {
+    console.log(`Pasban app listening on http://localhost:${port}`);
+  });
+}
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, start };

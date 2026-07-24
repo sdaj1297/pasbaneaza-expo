@@ -18,7 +18,9 @@ The beta database is a cloned testing database. Testers can create, edit, delete
 
 ## HostGator Node App
 
-The repo includes a root `app.js` file for cPanel/Passenger. Use this as the startup file if cPanel asks for one.
+The repo includes a root `app.js` file for cPanel/Passenger. Use this as the startup file if cPanel asks for one, or run it through `npm start`.
+
+`package.json` keeps `main` pointed at `expo-router/entry` because Expo web export depends on that entrypoint.
 
 The Node app serves both:
 
