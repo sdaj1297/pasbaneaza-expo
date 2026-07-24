@@ -37,10 +37,12 @@ This avoids a risky full migration before the new UI is stable.
 
 - Lunar year start dates and month lengths.
 - Used to calculate local Islamic date.
+- Month lengths remain editable as 29 or 30 days so admins can adjust the calendar after moonsighting.
 
 `ISLAMIC_EVENTS`
 
 - Observances by Islamic month/day.
+- Used by the full calendar grid to label days such as Ashura, Arbaeen, Eid-e-Ghadeer, and other configured observances.
 
 `SAYINGS`
 
@@ -77,6 +79,17 @@ Purpose: durable status overlay for Anjuman schedule events. The base event rema
 - `status`
 
 Purpose: store reminder, membership, volunteer, and contact submissions until a CRM/admin workflow exists.
+
+## Calendar Export
+
+The calendar grid is derived, not stored:
+
+- Load approved public `EVENTS` rows for the visible Gregorian month grid.
+- Calculate each day's Hijri date from `ISLAMIC_CALENDAR`.
+- Attach matching `ISLAMIC_EVENTS` rows by Islamic month/day.
+- Generate `.ics` output from the same filtered event set.
+
+On native Expo builds, visible events can be written into a local device calendar through `expo-calendar`. On web/Netlify, the same visible event set is exported as a downloadable `.ics` file.
 
 ## Event Type Semantics
 

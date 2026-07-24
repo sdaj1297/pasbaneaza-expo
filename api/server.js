@@ -5,7 +5,13 @@ const path = require('path');
 require('dotenv').config();
 
 const { pool } = require('./db');
-const { getIslamicDate, getIslamicEvents } = require('./services/calendarService');
+const {
+  getIslamicCalendarYears,
+  getIslamicDate,
+  getIslamicEvents,
+  updateIslamicMonthLength,
+} = require('./services/calendarService');
+const { getCalendarIcs, getCalendarMonth } = require('./services/calendarMonthService');
 const { getActiveAnnouncements, getFeaturedAnnouncement, getSayings } = require('./services/contentService');
 const { getEventById, getEvents, getEventsForDate } = require('./services/eventService');
 const { getMajlisStatusForDate, updateMajlisStatus } = require('./services/statusService');
@@ -98,6 +104,66 @@ app.get('/api/events/:id', async (req, res, next) => {
     }
 
     res.json({ event });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/calendar/month', async (req, res, next) => {
+  try {
+    const date = getDateParam(req);
+    const calendar = await getCalendarMonth({
+      date,
+      filter: String(req.query.filter || 'all'),
+      limit: req.query.limit,
+    });
+    res.json(calendar);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/calendar.ics', async (req, res, next) => {
+  try {
+    if (Boolean(req.query.from) !== Boolean(req.query.to)) {
+      const error = new Error('Use both from and to when exporting a date range.');
+      error.status = 400;
+      throw error;
+    }
+
+    const ics = await getCalendarIcs({
+      date: req.query.date ? getDateParam(req) : undefined,
+      from: req.query.from ? getDateParam({ query: { date: req.query.from } }) : undefined,
+      to: req.query.to ? getDateParam({ query: { date: req.query.to } }) : undefined,
+      filter: String(req.query.filter || 'all'),
+      limit: req.query.limit,
+    });
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="pasbaneaza-calendar.ics"');
+    res.send(ics);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/islamic-calendar/years', async (_req, res, next) => {
+  try {
+    const years = await getIslamicCalendarYears();
+    res.json({ years });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/islamic-calendar/:year/months/:month', async (req, res, next) => {
+  try {
+    const result = await updateIslamicMonthLength({
+      year: req.params.year,
+      month: req.params.month,
+      length: req.body.length,
+    });
+    res.json(result);
   } catch (error) {
     next(error);
   }

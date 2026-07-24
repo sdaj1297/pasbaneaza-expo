@@ -59,6 +59,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /islamicCalendar/{year} {
+      allow read: if true;
+
+      allow update: if
+        request.resource.data.year == resource.data.year
+        && request.resource.data.firstDate == resource.data.firstDate
+        && request.resource.data.months is list
+        && request.resource.data.months.size() == 12;
+
+      allow create, delete: if false;
+    }
+
+    match /islamicEvents/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /settings/{settingId} {
       allow read: if true;
       allow write: if false;

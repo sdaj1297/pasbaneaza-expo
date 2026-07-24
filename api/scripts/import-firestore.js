@@ -4,6 +4,7 @@ const { applicationDefault, cert, getApps, initializeApp } = require('firebase-a
 const { FieldValue, getFirestore } = require('firebase-admin/firestore');
 
 const { pool } = require('../db');
+const { getAllIslamicEvents, getIslamicCalendarYears } = require('../services/calendarService');
 const { getActiveAnnouncements, getFeaturedAnnouncement, getSayings } = require('../services/contentService');
 const { getEvents } = require('../services/eventService');
 const { getHoustonDate } = require('../utils/dates');
@@ -92,11 +93,13 @@ function bannerFromAnnouncement(announcement, featuredAnnouncementId) {
 async function importFirestore() {
   const db = initFirebaseAdmin();
   const writer = new BatchWriter(db);
-  const [events, announcements, featuredAnnouncement, sayings] = await Promise.all([
+  const [events, announcements, featuredAnnouncement, sayings, islamicCalendarYears, islamicEvents] = await Promise.all([
     getEvents({ filter: 'all', from: IMPORT_FROM_DATE, limit: IMPORT_LIMIT }),
     getActiveAnnouncements(20),
     getFeaturedAnnouncement(),
     getSayings(3),
+    getIslamicCalendarYears(),
+    getAllIslamicEvents(),
   ]);
 
   const eventsByDate = new Map();
@@ -136,6 +139,24 @@ async function importFirestore() {
     await writer.flushIfNeeded();
   }
 
+  for (const year of islamicCalendarYears) {
+    writer.set(db.collection('islamicCalendar').doc(String(year.year)), {
+      ...year,
+      importedAt: FieldValue.serverTimestamp(),
+      source: 'legacy-mysql',
+    });
+    await writer.flushIfNeeded();
+  }
+
+  for (const event of islamicEvents) {
+    writer.set(db.collection('islamicEvents').doc(event.id), {
+      ...event,
+      importedAt: FieldValue.serverTimestamp(),
+      source: 'legacy-mysql',
+    });
+    await writer.flushIfNeeded();
+  }
+
   writer.set(db.collection('settings').doc('home'), {
     announcements,
     sayings,
@@ -150,6 +171,8 @@ async function importFirestore() {
     importedDays: eventsByDate.size,
     importedBanners: announcements.length,
     importedSayings: sayings.length,
+    importedIslamicCalendarYears: islamicCalendarYears.length,
+    importedIslamicEvents: islamicEvents.length,
     writes: writer.total,
     fromDate: IMPORT_FROM_DATE,
   };

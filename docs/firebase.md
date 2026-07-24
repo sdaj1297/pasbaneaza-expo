@@ -37,6 +37,8 @@ eventDays/{yyyy-mm-dd}
 eventDays/{yyyy-mm-dd}/items/{eventId}
 majlisStatus/{yyyy-mm-dd}/events/{eventId}
 banners/{bannerId}
+islamicCalendar/{lunarYear}
+islamicEvents/{eventId}
 settings/home
 settings/prayerTimes
 submissions/{submissionId}
@@ -49,6 +51,10 @@ submissions/{submissionId}
 `majlisStatus/{date}/events/{eventId}` is community writable for now and can later be protected by Firebase Auth.
 
 `banners` controls homepage flyer/special event mode.
+
+`islamicCalendar/{lunarYear}` mirrors legacy `ISLAMIC_CALENDAR`: each document has `year`, `firstDate`, and twelve month length rows. The beta admin page can update month lengths to 29 or 30 days.
+
+`islamicEvents` mirrors active legacy `ISLAMIC_EVENTS` rows for calendar observance labels.
 
 `submissions` is write-only from the public app.
 
@@ -139,6 +145,8 @@ The importer writes:
 - `eventDays/{date}`
 - `eventDays/{date}/items/{eventId}`
 - `banners/{bannerId}`
+- `islamicCalendar/{lunarYear}`
+- `islamicEvents/{eventId}`
 - `settings/home`
 
 It does not delete old Firestore documents yet. For beta, re-importing overwrites matching IDs and leaves unmatched documents alone.

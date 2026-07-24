@@ -35,6 +35,46 @@ Returns the payload needed by the home screen:
 
 ## Calendar And Events
 
+`GET /calendar/month`
+
+Query params:
+
+- `date=YYYY-MM-DD`
+- `filter=all|anjuman|brothers|sisters|family`
+
+Returns a complete Sunday-through-Saturday month grid. Each day includes Gregorian metadata, calculated Islamic date, Islamic observances, and approved public events for that date.
+
+```json
+{
+  "month": {
+    "label": "June 2026",
+    "startDate": "2026-06-01",
+    "endDate": "2026-06-30",
+    "gridStart": "2026-05-31",
+    "gridEnd": "2026-07-04"
+  },
+  "days": [
+    {
+      "date": "2026-06-28",
+      "islamicDate": { "label": "13 Muharram, 1448" },
+      "islamicEvents": [],
+      "events": []
+    }
+  ]
+}
+```
+
+`GET /calendar.ics`
+
+Query params:
+
+- `date=YYYY-MM-DD`
+- `from=YYYY-MM-DD`
+- `to=YYYY-MM-DD`
+- `filter=all|anjuman|brothers|sisters|family`
+
+Returns a `text/calendar` `.ics` file for import/subscription by calendar clients. The Expo app also generates this client-side for the Firestore/Netlify beta and uses native calendar APIs on iOS/Android.
+
 `GET /events`
 
 Query params:
@@ -129,6 +169,22 @@ Returns date-active legacy `ANNOUNCEMENTS` rows, including extracted `imageUrl` 
 `GET /meta/today`
 
 Returns Houston Gregorian date, calculated Islamic date from `ISLAMIC_CALENDAR`, and active rows from `ISLAMIC_EVENTS`.
+
+`GET /islamic-calendar/years`
+
+Returns legacy `ISLAMIC_CALENDAR` rows normalized as years with twelve month length records.
+
+`PATCH /islamic-calendar/:year/months/:month`
+
+Body:
+
+```json
+{
+  "length": 29
+}
+```
+
+Updates the month length for a lunar year. `length` must be `29` or `30`. This is intentionally open during beta so the public admin page can preserve the legacy month-adjustment utility; later auth can be added without changing the route contract.
 
 ## Prayer Times
 

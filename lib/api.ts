@@ -2,6 +2,8 @@ import {
   Announcement,
   CommunityEvent,
   events,
+  islamicCalendarYears,
+  islamicEvents,
   islamicTodayLabel,
   prayerTimes,
   PrayerTime,
@@ -12,11 +14,21 @@ import {
   todayLabel,
 } from '@/data/mock';
 import {
+  buildCalendarMonth,
+  CalendarFilter,
+  CalendarMonthPayload,
+  getHoustonDate,
+  IslamicCalendarYear,
+} from '@/lib/calendarUtils';
+import {
+  fetchCalendarMonthFromFirebase,
   fetchEventsFromFirebase,
   fetchHomeFromFirebase,
+  fetchIslamicCalendarYearsFromFirebase,
   fetchPrayerTimesFromFirebase,
   fetchTodayMajlisFromFirebase,
   isFirebaseBackendEnabled,
+  updateIslamicMonthLengthInFirebase,
   updateMajlisStatusInFirebase,
 } from '@/lib/firebaseData';
 
@@ -89,6 +101,19 @@ export async function fetchEvents(filter = 'all'): Promise<CommunityEvent[]> {
   return result.events;
 }
 
+export async function fetchCalendarMonth(date = getHoustonDate(), filter: CalendarFilter = 'all'): Promise<CalendarMonthPayload> {
+  if (isFirebaseBackendEnabled()) return fetchCalendarMonthFromFirebase(date, filter);
+
+  const fallback = buildCalendarMonth({
+    date,
+    filter,
+    events: events.filter((event) => matchesFilter(event, filter)),
+    calendarYears: islamicCalendarYears,
+    islamicEvents,
+  });
+  return request<CalendarMonthPayload>(`/calendar/month?date=${encodeURIComponent(date)}&filter=${encodeURIComponent(filter)}`, fallback);
+}
+
 export async function fetchHome(): Promise<HomePayload & { specialEvent: SpecialEvent }> {
   if (isFirebaseBackendEnabled()) return fetchHomeFromFirebase();
 
@@ -144,4 +169,44 @@ export async function fetchPrayerTimes(): Promise<PrayerTime[]> {
 
   const result = await request<{ times: PrayerTime[] }>('/prayer-times/today', { times: prayerTimes });
   return result.times;
+}
+
+export async function fetchIslamicCalendarYears(): Promise<IslamicCalendarYear[]> {
+  if (isFirebaseBackendEnabled()) return fetchIslamicCalendarYearsFromFirebase();
+
+  const result = await request<{ years: IslamicCalendarYear[] }>('/islamic-calendar/years', { years: islamicCalendarYears });
+  return result.years;
+}
+
+export async function updateIslamicMonthLength(year: number, month: number, length: 29 | 30): Promise<IslamicCalendarYear> {
+  if (isFirebaseBackendEnabled()) return updateIslamicMonthLengthInFirebase(year, month, length);
+
+  const fallbackYear = islamicCalendarYears.find((item) => item.year === year) || islamicCalendarYears[0];
+  const result = await sendJson<{ year: IslamicCalendarYear }>(
+    `/islamic-calendar/${year}/months/${month}`,
+    { length },
+    {
+      year: {
+        ...fallbackYear,
+        months: fallbackYear.months.map((item) => item.index === month ? { ...item, length } : item),
+      },
+    },
+    'PATCH',
+  );
+  return result.year;
+}
+
+function matchesFilter(event: CommunityEvent, filter: CalendarFilter) {
+  switch (filter) {
+    case 'anjuman':
+      return event.isAnjumanSchedule;
+    case 'brothers':
+      return ['M', 'F', 'A'].includes(event.type);
+    case 'sisters':
+      return ['W', 'F', 'A'].includes(event.type);
+    case 'family':
+      return ['F', 'A'].includes(event.type);
+    default:
+      return true;
+  }
 }

@@ -27,6 +27,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Pasban-e-Aza to add majlis and community programs to your calendar.",
+          "writeOnlyCalendarPermission": "Allow Pasban-e-Aza to add majlis and community programs to your calendar."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -48,6 +48,29 @@ export type Announcement = {
   fullPage?: boolean;
 };
 
+export type IslamicMonthLength = {
+  index: number;
+  key: string;
+  name: string;
+  length: number;
+};
+
+export type IslamicCalendarYear = {
+  id: string;
+  year: number;
+  firstDate: string;
+  months: IslamicMonthLength[];
+};
+
+export type IslamicCalendarEvent = {
+  id: string;
+  month: number;
+  day: number;
+  title: string;
+  description: string;
+  color: string;
+};
+
 export const todayLabel = 'June 28, 2026';
 export const islamicTodayLabel = '13 Muharram, 1448';
 
@@ -130,6 +153,35 @@ export const events: CommunityEvent[] = [
     isPublished: true,
     waitingApproval: false,
   },
+];
+
+export const islamicCalendarYears: IslamicCalendarYear[] = [
+  {
+    id: '68',
+    year: 1448,
+    firstDate: '2026-06-16',
+    months: [
+      { index: 1, key: 'MUHARRAM', name: 'Muharram', length: 30 },
+      { index: 2, key: 'SAFAR', name: 'Safar', length: 29 },
+      { index: 3, key: 'RABIA_AWAL', name: 'Rabi al-Awwal', length: 30 },
+      { index: 4, key: 'RABIA_THANI', name: 'Rabi al-Thani', length: 29 },
+      { index: 5, key: 'JAMADIAL_AWAL', name: 'Jumada al-Awwal', length: 30 },
+      { index: 6, key: 'JAMADIAL_THANI', name: 'Jumada al-Thani', length: 29 },
+      { index: 7, key: 'RAJAB', name: 'Rajab', length: 30 },
+      { index: 8, key: 'SHABAN', name: 'Shaban', length: 29 },
+      { index: 9, key: 'RAMAZAN', name: 'Ramadan', length: 30 },
+      { index: 10, key: 'SHAWWAL', name: 'Shawwal', length: 30 },
+      { index: 11, key: 'ZILQADAH', name: 'Dhu al-Qadah', length: 29 },
+      { index: 12, key: 'ZILHAJ', name: 'Dhu al-Hijjah', length: 29 },
+    ],
+  },
+];
+
+export const islamicEvents: IslamicCalendarEvent[] = [
+  { id: 'muharram-1', month: 1, day: 1, title: 'Muharram begins', description: '', color: 'R' },
+  { id: 'ashura', month: 1, day: 10, title: 'Ashura', description: '', color: 'R' },
+  { id: 'arbaeen', month: 2, day: 20, title: 'Arbaeen', description: '', color: 'R' },
+  { id: 'eid-ghadeer', month: 12, day: 18, title: 'Eid-e-Ghadeer', description: '', color: 'G' },
 ];
 
 export const prayerTimes: PrayerTime[] = [

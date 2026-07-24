@@ -14,6 +14,8 @@ import {
   Announcement,
   CommunityEvent,
   events as fallbackEvents,
+  islamicCalendarYears as fallbackIslamicCalendarYears,
+  islamicEvents as fallbackIslamicEvents,
   islamicTodayLabel,
   MajlisStatus,
   prayerTimes as fallbackPrayerTimes,
@@ -24,6 +26,15 @@ import {
   StatusItem,
   todayLabel,
 } from '@/data/mock';
+import {
+  buildCalendarMonth,
+  CalendarFilter,
+  CalendarMonthPayload,
+  getMonthRange,
+  IslamicCalendarEvent,
+  IslamicCalendarYear,
+  islamicMonthDefinitions,
+} from '@/lib/calendarUtils';
 import type { DocumentData } from 'firebase/firestore';
 import type { HomePayload } from '@/lib/api';
 import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
@@ -35,15 +46,21 @@ export function isFirebaseBackendEnabled() {
   return process.env.EXPO_PUBLIC_DATA_BACKEND === 'firebase' && isFirebaseConfigured();
 }
 
-export async function fetchEventsFromFirebase(filter = 'all'): Promise<CommunityEvent[]> {
+export async function fetchEventsFromFirebase(
+  filter = 'all',
+  options: { from?: string; to?: string } = {},
+): Promise<CommunityEvent[]> {
   if (!isFirebaseBackendEnabled()) return fallbackEvents;
 
   try {
     const db = getFirebaseDb();
     const snapshot = await getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS)));
+    const from = options.from || getHoustonDate();
     const events = snapshot.docs
       .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
       .filter(isPublicEvent)
+      .filter((event) => event.date >= from)
+      .filter((event) => !options.to || event.date <= options.to)
       .filter((event) => matchesFilter(event, filter));
 
     return events;
@@ -51,6 +68,36 @@ export async function fetchEventsFromFirebase(filter = 'all'): Promise<Community
     console.warn('Falling back to mock events after Firestore read failed.', error);
     return fallbackEvents;
   }
+}
+
+export async function fetchCalendarMonthFromFirebase(
+  date: string,
+  filter: CalendarFilter,
+): Promise<CalendarMonthPayload> {
+  if (!isFirebaseBackendEnabled()) {
+    return buildCalendarMonth({
+      date,
+      filter,
+      events: fallbackEvents.filter((event) => matchesFilter(event, filter)),
+      calendarYears: fallbackIslamicCalendarYears,
+      islamicEvents: fallbackIslamicEvents,
+    });
+  }
+
+  const range = getMonthRange(date);
+  const [events, calendarYears, islamicEvents] = await Promise.all([
+    fetchEventsFromFirebase(filter, { from: range.gridStart, to: range.gridEnd }),
+    fetchIslamicCalendarYearsFromFirebase(),
+    fetchIslamicEventsFromFirebase(),
+  ]);
+
+  return buildCalendarMonth({
+    date,
+    filter,
+    events,
+    calendarYears,
+    islamicEvents,
+  });
 }
 
 export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEvent: SpecialEvent }> {
@@ -156,6 +203,56 @@ export async function updateMajlisStatusInFirebase(
   return fetchTodayMajlisFromFirebase();
 }
 
+export async function fetchIslamicCalendarYearsFromFirebase(): Promise<IslamicCalendarYear[]> {
+  if (!isFirebaseBackendEnabled()) return fallbackIslamicCalendarYears;
+
+  try {
+    const db = getFirebaseDb();
+    const snapshot = await getDocs(query(collection(db, 'islamicCalendar'), orderBy('year'), limit(80)));
+    const years = snapshot.docs
+      .map((yearDoc) => normalizeIslamicCalendarYear(yearDoc.id, yearDoc.data()))
+      .filter((year) => year.months.length === 12 && Boolean(year.firstDate));
+
+    return years.length ? years : fallbackIslamicCalendarYears;
+  } catch (error) {
+    console.warn('Falling back to mock Islamic calendar after Firestore read failed.', error);
+    return fallbackIslamicCalendarYears;
+  }
+}
+
+export async function updateIslamicMonthLengthInFirebase(
+  year: number,
+  month: number,
+  length: 29 | 30,
+): Promise<IslamicCalendarYear> {
+  if (!isFirebaseBackendEnabled()) return fallbackIslamicCalendarYears[0];
+
+  const years = await fetchIslamicCalendarYearsFromFirebase();
+  const currentYear = years.find((item) => item.year === year);
+
+  if (!currentYear) {
+    throw new Error(`Islamic calendar year ${year} was not found.`);
+  }
+
+  const nextYear = {
+    ...currentYear,
+    months: currentYear.months.map((item) => item.index === month ? { ...item, length } : item),
+  };
+
+  const db = getFirebaseDb();
+  await setDoc(
+    doc(db, 'islamicCalendar', String(year)),
+    {
+      ...nextYear,
+      source: 'community',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return nextYear;
+}
+
 export async function fetchPrayerTimesFromFirebase(): Promise<PrayerTime[]> {
   if (!isFirebaseBackendEnabled()) return fallbackPrayerTimes;
 
@@ -167,6 +264,20 @@ export async function fetchPrayerTimesFromFirebase(): Promise<PrayerTime[]> {
   } catch (error) {
     console.warn('Falling back to mock prayer times after Firestore read failed.', error);
     return fallbackPrayerTimes;
+  }
+}
+
+async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]> {
+  if (!isFirebaseBackendEnabled()) return fallbackIslamicEvents;
+
+  try {
+    const db = getFirebaseDb();
+    const snapshot = await getDocs(query(collection(db, 'islamicEvents'), limit(120)));
+    const events = snapshot.docs.map((eventDoc) => normalizeIslamicCalendarEvent(eventDoc.id, eventDoc.data()));
+    return events.length ? events : fallbackIslamicEvents;
+  } catch (error) {
+    console.warn('Falling back to mock Islamic events after Firestore read failed.', error);
+    return fallbackIslamicEvents;
   }
 }
 
@@ -183,6 +294,41 @@ function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
     prayerTimes: fallbackPrayerTimes,
     upcomingEvents: fallbackEvents,
     specialEvent: fallbackSpecialEvent,
+  };
+}
+
+function normalizeIslamicCalendarYear(id: string, data: DocumentData): IslamicCalendarYear {
+  const monthsValue = data.months;
+  const months = islamicMonthDefinitions.map((definition) => {
+    const fromArray = Array.isArray(monthsValue)
+      ? monthsValue.find((item) => Number(item?.index) === definition.index || item?.key === definition.key)
+      : undefined;
+    const fromObject = monthsValue && !Array.isArray(monthsValue) && typeof monthsValue === 'object'
+      ? monthsValue[definition.key] || monthsValue[String(definition.index)]
+      : undefined;
+
+    return {
+      ...definition,
+      length: Number(fromArray?.length || fromObject?.length || fromObject || data[definition.key] || 0),
+    };
+  });
+
+  return {
+    id,
+    year: Number(data.year || data.lunarYear || id),
+    firstDate: normalizeDate(data.firstDate || data.FIRST_DATE),
+    months,
+  };
+}
+
+function normalizeIslamicCalendarEvent(id: string, data: DocumentData): IslamicCalendarEvent {
+  return {
+    id,
+    month: Number(data.month || data.IMONTH || 0),
+    day: Number(data.day || data.IDAY || 0),
+    title: String(data.title || data.IEVENT || ''),
+    description: String(data.description || data.EVENT_DESC || ''),
+    color: String(data.color || data.ICOLOR || ''),
   };
 }
 
