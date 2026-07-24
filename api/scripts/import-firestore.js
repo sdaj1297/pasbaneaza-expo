@@ -1,6 +1,7 @@
 require('dotenv').config();
 
-const admin = require('firebase-admin');
+const { applicationDefault, cert, getApps, initializeApp } = require('firebase-admin/app');
+const { FieldValue, getFirestore } = require('firebase-admin/firestore');
 
 const { pool } = require('../db');
 const { getActiveAnnouncements, getFeaturedAnnouncement, getSayings } = require('../services/contentService');
@@ -11,21 +12,24 @@ const IMPORT_LIMIT = Number(process.env.FIRESTORE_IMPORT_LIMIT || 250);
 const IMPORT_FROM_DATE = process.env.FIRESTORE_IMPORT_FROM_DATE || getHoustonDate();
 
 function initFirebaseAdmin() {
-  if (admin.apps.length) return admin.firestore();
+  if (getApps().length) return getFirestore();
 
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountJson) {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(serviceAccountJson)),
+    initializeApp({
+      credential: cert(JSON.parse(serviceAccountJson)),
       projectId,
     });
   } else {
-    admin.initializeApp({ projectId });
+    initializeApp({
+      credential: applicationDefault(),
+      projectId,
+    });
   }
 
-  return admin.firestore();
+  return getFirestore();
 }
 
 class BatchWriter {
@@ -59,7 +63,7 @@ function eventToFirestore(event) {
   return {
     ...event,
     sortTime: timeToMinutes(event.time),
-    importedAt: admin.firestore.FieldValue.serverTimestamp(),
+    importedAt: FieldValue.serverTimestamp(),
     source: 'legacy-mysql',
   };
 }
@@ -80,7 +84,7 @@ function bannerFromAnnouncement(announcement, featuredAnnouncementId) {
     startsAt: startDate,
     endsAt: endDate,
     displayOrder: announcement.displayOrder || 0,
-    importedAt: admin.firestore.FieldValue.serverTimestamp(),
+    importedAt: FieldValue.serverTimestamp(),
     source: 'legacy-mysql',
   };
 }
@@ -118,7 +122,7 @@ async function importFirestore() {
       date,
       eventCount: dayEvents.length,
       anjumanCount: dayEvents.filter((event) => event.isAnjumanSchedule).length,
-      importedAt: admin.firestore.FieldValue.serverTimestamp(),
+      importedAt: FieldValue.serverTimestamp(),
       source: 'legacy-mysql',
     });
     await writer.flushIfNeeded();
@@ -135,7 +139,7 @@ async function importFirestore() {
   writer.set(db.collection('settings').doc('home'), {
     announcements,
     sayings,
-    importedAt: admin.firestore.FieldValue.serverTimestamp(),
+    importedAt: FieldValue.serverTimestamp(),
     source: 'legacy-mysql',
   });
 

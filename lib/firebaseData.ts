@@ -46,7 +46,7 @@ export async function fetchEventsFromFirebase(filter = 'all'): Promise<Community
       .filter(isPublicEvent)
       .filter((event) => matchesFilter(event, filter));
 
-    return events.length ? events : fallbackEvents;
+    return events;
   } catch (error) {
     console.warn('Falling back to mock events after Firestore read failed.', error);
     return fallbackEvents;
@@ -84,7 +84,7 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
       featuredAnnouncement: null,
       sayings: Array.isArray(home.sayings) ? home.sayings : [],
       prayerTimes: normalizePrayerTimes(home.prayerTimes),
-      upcomingEvents: upcomingEvents.length ? upcomingEvents : fallbackEvents,
+      upcomingEvents,
       specialEvent: activeBanner || fallbackSpecialEvent,
     };
   } catch (error) {
@@ -124,7 +124,7 @@ export async function fetchTodayMajlisFromFirebase(): Promise<StatusItem[]> {
       };
     });
 
-    return statusItems.length ? statusItems : fallbackStatusItems;
+    return statusItems;
   } catch (error) {
     console.warn('Falling back to mock majlis status after Firestore read failed.', error);
     return fallbackStatusItems;
