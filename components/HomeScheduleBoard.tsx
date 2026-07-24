@@ -1,7 +1,9 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
+import { getEventAudienceLabel, getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 export type HomeScheduleFilter = 'all' | 'anjuman' | 'brothers' | 'sisters' | 'family';
 
@@ -11,13 +13,6 @@ const filterLabels: Record<HomeScheduleFilter, string> = {
   brothers: 'Brothers',
   sisters: 'Sisters',
   family: 'Family',
-};
-
-const audienceLabel: Record<string, string> = {
-  M: 'Brothers',
-  W: 'Sisters',
-  F: 'Family',
-  A: 'All',
 };
 
 type HomeScheduleBoardProps = {
@@ -30,8 +25,17 @@ export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: Home
   return (
     <View style={styles.board}>
       <View style={styles.boardHead}>
-        <Text style={styles.kicker}>Schedule</Text>
-        <Text style={styles.heading}>Programs coming up in Houston</Text>
+        <View style={styles.boardHeadRow}>
+          <View style={styles.boardHeadCopy}>
+            <Text style={styles.kicker}>Schedule</Text>
+            <Text style={styles.heading}>Programs coming up in Houston</Text>
+          </View>
+          <Link href="/connect?intent=event" asChild>
+            <Pressable style={styles.submitButton}>
+              <Text style={styles.submitButtonText}>Submit Event</Text>
+            </Pressable>
+          </Link>
+        </View>
       </View>
 
       <View style={styles.filters}>
@@ -64,26 +68,31 @@ export function HomeScheduleBoard({ activeFilter, events, onFilterChange }: Home
 }
 
 function ScheduleRow({ event }: { event: CommunityEvent }) {
+  const tone = getEventTone(event);
+  const toneLabel = getEventToneLabel(event);
   const openMaps = () => {
     if (!event.address) return;
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`);
   };
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, styles[`${tone}Row`]]}>
       <View style={styles.timeColumn}>
-        <Text style={styles.time}>{event.time || 'TBA'}</Text>
+        <Text style={[styles.time, styles[`${tone}Time`]]}>{event.time || 'TBA'}</Text>
         <Text style={styles.date}>{event.islamicDate || event.date}</Text>
       </View>
 
       <View style={styles.eventColumn}>
         <View style={styles.badgeRow}>
-          <View style={[styles.badge, event.isAnjumanSchedule ? styles.anjumanBadge : styles.communityBadge]}>
-            <Text style={[styles.badgeText, event.isAnjumanSchedule ? styles.anjumanBadgeText : styles.communityBadgeText]}>
-              {event.isAnjumanSchedule ? 'Anjuman committed' : 'Community'}
-            </Text>
+          {event.isAnjumanSchedule ? (
+            <View style={styles.logoBadge}>
+              <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.logo} resizeMode="contain" />
+            </View>
+          ) : null}
+          <View style={[styles.badge, styles[`${tone}Badge`]]}>
+            <Text style={[styles.badgeText, styles[`${tone}BadgeText`]]}>{toneLabel}</Text>
           </View>
-          <Text style={styles.audience}>{audienceLabel[event.type] || 'Program'}</Text>
+          <Text style={styles.audience}>{getEventAudienceLabel(event)}</Text>
         </View>
 
         <Text style={styles.contact}>{event.contactName || event.title}</Text>
@@ -112,6 +121,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.oxblood,
     padding: spacing.lg,
   },
+  boardHeadRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  boardHeadCopy: {
+    flex: 1,
+    minWidth: 260,
+  },
   kicker: {
     color: colors.gold,
     fontSize: typography.label,
@@ -125,6 +145,22 @@ const styles = StyleSheet.create({
     lineHeight: 39,
     marginTop: spacing.sm,
     maxWidth: 620,
+  },
+  submitButton: {
+    alignItems: 'center',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  submitButtonText: {
+    color: colors.night,
+    fontSize: typography.small,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
   filters: {
     backgroundColor: colors.surfaceAlt,
@@ -164,10 +200,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
+    borderLeftWidth: 4,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
     padding: spacing.lg,
+  },
+  committedRow: {
+    backgroundColor: colors.committedBg,
+    borderLeftColor: colors.committedBorder,
+  },
+  sistersRow: {
+    backgroundColor: colors.sistersBg,
+    borderLeftColor: colors.sistersBorder,
+  },
+  communityRow: {
+    backgroundColor: colors.communityBg,
+    borderLeftColor: colors.communityBorder,
   },
   timeColumn: {
     gap: spacing.xs,
@@ -177,6 +226,15 @@ const styles = StyleSheet.create({
     color: colors.red,
     fontSize: typography.title,
     fontWeight: '900',
+  },
+  committedTime: {
+    color: colors.gold,
+  },
+  sistersTime: {
+    color: colors.blue,
+  },
+  communityTime: {
+    color: '#75d39b',
   },
   date: {
     color: colors.muted,
@@ -196,27 +254,50 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   badge: {
+    borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  anjumanBadge: {
+  logoBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.night,
+    borderColor: 'rgba(212, 168, 60, .55)',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  logo: {
+    height: 24,
+    width: 24,
+  },
+  committedBadge: {
     backgroundColor: 'rgba(217, 173, 67, .18)',
+    borderColor: colors.gold,
+  },
+  sistersBadge: {
+    backgroundColor: 'rgba(117, 183, 230, .14)',
+    borderColor: colors.blue,
   },
   communityBadge: {
-    borderColor: colors.border,
-    borderWidth: 1,
+    backgroundColor: 'rgba(47, 107, 77, .24)',
+    borderColor: colors.communityBorder,
   },
   badgeText: {
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  anjumanBadgeText: {
-    color: colors.red,
+  committedBadgeText: {
+    color: colors.gold,
+  },
+  sistersBadgeText: {
+    color: colors.blue,
   },
   communityBadgeText: {
-    color: colors.muted,
+    color: '#75d39b',
   },
   audience: {
     color: colors.muted,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
@@ -17,6 +17,7 @@ import {
   getHoustonDate,
   syncEventsToDeviceCalendar,
 } from '@/lib/calendarUtils';
+import { getEventTone, getEventToneLabel } from '@/lib/eventPresentation';
 
 const filterOptions: { label: string; value: CalendarFilter }[] = [
   { label: 'All', value: 'all' },
@@ -182,13 +183,16 @@ function CalendarCell({ day, compact }: { day: CalendarDay; compact: boolean }) 
 
       <View style={styles.eventStack}>
         {shownEvents.map((event) => (
-          <View key={event.id} style={event.isAnjumanSchedule ? styles.anjumanEventChip : styles.eventChip}>
+          <View key={event.id} style={[styles.eventChip, styles[`${getEventTone(event)}EventChip`]]}>
             <Text style={styles.eventChipText} numberOfLines={2}>
-              <Text style={styles.eventPrefix}>{event.isAnjumanSchedule ? 'ANJ' : shortPrefix(event.calendarPrefix)}</Text>
+              <Text style={[styles.eventPrefix, styles[`${getEventTone(event)}EventPrefix`]]}>{shortPrefix(getEventToneLabel(event))}</Text>
               {'  '}
               {event.time ? `${event.time} ` : ''}
               {event.contactName || event.title}
             </Text>
+            {event.isAnjumanSchedule ? (
+              <Image source={require('@/assets/images/pasban-logo-white.png')} style={styles.eventLogo} resizeMode="contain" />
+            ) : null}
           </View>
         ))}
         {hiddenCount ? <Text style={styles.moreText}>+{hiddenCount} more</Text> : null}
@@ -397,20 +401,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   eventChip: {
+    alignItems: 'flex-start',
     backgroundColor: colors.nightRaised,
     borderColor: colors.border,
     borderRadius: radii.sm,
     borderWidth: 1,
+    gap: spacing.xs,
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
   },
-  anjumanEventChip: {
-    backgroundColor: colors.redDark,
-    borderColor: colors.red,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+  committedEventChip: {
+    backgroundColor: colors.committedBg,
+    borderColor: colors.gold,
+  },
+  sistersEventChip: {
+    backgroundColor: colors.sistersBg,
+    borderColor: colors.blue,
+  },
+  communityEventChip: {
+    backgroundColor: colors.communityBg,
+    borderColor: colors.communityBorder,
   },
   eventChipText: {
     color: colors.ink,
@@ -421,6 +431,19 @@ const styles = StyleSheet.create({
   eventPrefix: {
     color: colors.gold,
     fontWeight: '900',
+  },
+  committedEventPrefix: {
+    color: colors.gold,
+  },
+  sistersEventPrefix: {
+    color: colors.blue,
+  },
+  communityEventPrefix: {
+    color: '#75d39b',
+  },
+  eventLogo: {
+    height: 16,
+    width: 16,
   },
   moreText: {
     color: colors.muted,

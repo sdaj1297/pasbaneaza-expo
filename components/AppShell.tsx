@@ -18,6 +18,7 @@ const navItems = [
   { href: '/prayer', label: 'Prayer' },
   { href: '/status', label: 'Status' },
   { href: '/connect', label: 'Connect' },
+  { href: '/connect?intent=event', label: 'Submit Event', matchPath: '/submit-event', isCta: true },
   { href: '/login', label: 'Login' },
 ] as const;
 
@@ -44,11 +45,12 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
         {Platform.OS === 'web' ? (
           <View style={styles.nav}>
             {navItems.map((item) => {
-              const active = item.href === '/' ? activePath === '/' : activePath.startsWith(item.href);
+              const matchPath = 'matchPath' in item ? item.matchPath : item.href;
+              const active = matchPath === '/' ? activePath === '/' : activePath.startsWith(matchPath);
               return (
                 <Link key={item.href} href={item.href} asChild>
-                  <Pressable style={active ? styles.activeNavItem : styles.navItem}>
-                    <Text style={[styles.navText, active && styles.activeNavText]}>{item.label}</Text>
+                  <Pressable style={'isCta' in item && item.isCta ? styles.navCta : active ? styles.activeNavItem : styles.navItem}>
+                    <Text style={['isCta' in item && item.isCta ? styles.navCtaText : styles.navText, active && styles.activeNavText]}>{item.label}</Text>
                   </Pressable>
                 </Link>
               );
@@ -139,8 +141,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
+  navCta: {
+    borderRadius: radii.sm,
+    backgroundColor: colors.gold,
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
   navText: {
     color: colors.muted,
+    fontSize: typography.label,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  navCtaText: {
+    color: colors.night,
     fontSize: typography.label,
     fontWeight: '900',
     textTransform: 'uppercase',

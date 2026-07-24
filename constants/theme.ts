@@ -22,6 +22,12 @@ export const colors = {
   textSubtle: '#7f7668',
   oxblood: '#741820',
   ivory: '#fffaf0',
+  committedBg: '#2a0d10',
+  committedBorder: '#d4a83c',
+  communityBg: '#102018',
+  communityBorder: '#2f6b4d',
+  sistersBg: '#0d2430',
+  sistersBorder: '#75b7e6',
 };
 
 export const spacing = {
