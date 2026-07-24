@@ -127,6 +127,13 @@ export type AdminEventSubmission = {
   reviewedAt?: string;
 };
 
+export type AdminEventReviewInput = {
+  isAnjumanSchedule: boolean;
+  isPublished: boolean;
+  waitingApproval: boolean;
+  isPlaceholder: boolean;
+};
+
 const fallbackHome: HomePayload = {
   date: '',
   label: todayLabel,
@@ -276,14 +283,14 @@ export async function updateEventSubmissionStatus(submissionId: string, status: 
 
 export async function createEventFromSubmission(
   submission: AdminEventSubmission,
-  mode: 'placeholder' | 'publish',
+  review: AdminEventReviewInput,
 ): Promise<CommunityEvent> {
-  if (isFirebaseBackendEnabled()) return createEventFromSubmissionInFirebase(submission, mode);
+  if (isFirebaseBackendEnabled()) return createEventFromSubmissionInFirebase(submission, review);
 
   const fallback = events[0];
   const result = await sendJson<{ event: CommunityEvent }>(
-    `/admin/event-submissions/${submission.id}/${mode}`,
-    submission,
+    `/admin/event-submissions/${submission.id}/review`,
+    { submission, review },
     { event: fallback },
     'POST',
   );

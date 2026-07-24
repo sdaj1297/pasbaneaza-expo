@@ -42,6 +42,7 @@ import type { DocumentData } from 'firebase/firestore';
 import type { HomePayload } from '@/lib/api';
 import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import type {
+  AdminEventReviewInput,
   AdminEventSubmission,
   AdminSubmissionStatus,
   PublicSubmissionInput,
@@ -353,14 +354,14 @@ export async function updateEventSubmissionStatusInFirebase(
 
 export async function createEventFromSubmissionInFirebase(
   submission: AdminEventSubmission,
-  mode: 'placeholder' | 'publish',
+  review: AdminEventReviewInput,
 ): Promise<CommunityEvent> {
   if (!isFirebaseBackendEnabled()) {
     return fallbackEvents[0];
   }
 
   const payload = submission.payload || {};
-  const eventId = `${mode}-${submission.id}`;
+  const eventId = `review-${submission.id}`;
   const event: CommunityEvent = {
     id: eventId,
     title: stringOrUndefined(payload.eventTitle) || 'Majlis',
@@ -373,16 +374,16 @@ export async function createEventFromSubmissionInFirebase(
     address: String(payload.eventAddress || ''),
     flyer: stringOrUndefined(payload.flyerUrl),
     socialUrl: stringOrUndefined(payload.socialUrl),
-    isAnjumanSchedule: Boolean(payload.requestsAnjuman || payload.addToSchedule || payload.ADDTOSCHD),
-    isPublished: true,
-    waitingApproval: mode === 'placeholder',
-    isPlaceholder: mode === 'placeholder',
+    isAnjumanSchedule: review.isAnjumanSchedule,
+    isPublished: review.isPublished,
+    waitingApproval: review.waitingApproval,
+    isPlaceholder: review.isPlaceholder,
   };
 
   await writeEvent(event, submission.payload?.eventDate ? String(submission.payload.eventDate) : undefined);
   await updateEventSubmissionStatusInFirebase(
     submission.id,
-    mode === 'placeholder' ? 'placeholder_created' : 'approved',
+    review.waitingApproval || review.isPlaceholder ? 'placeholder_created' : 'approved',
   );
 
   return event;

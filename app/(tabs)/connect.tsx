@@ -49,8 +49,8 @@ const initialForm = {
   eventDate: '',
   eventTime: '',
   eventAddress: '',
-  eventAudience: 'Family',
-  requestsAnjuman: 'no',
+  eventAudience: '',
+  requestsAnjuman: '',
 };
 
 type FormState = typeof initialForm;
@@ -62,7 +62,18 @@ export default function ConnectScreen() {
   const [notice, setNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dateOptions = useMemo(() => [{ label: 'Select date', value: '' }, ...buildDateOptions()], []);
-  const timeOptions = useMemo(() => buildTimeOptions(), []);
+  const timeOptions = useMemo(
+    () => [{ label: 'Select time', value: '' }, ...buildTimeOptions().filter((option) => option.value)],
+    [],
+  );
+  const publicAudienceOptions = useMemo(
+    () => [{ label: 'Select event audience', value: '' }, ...eventAudienceOptions],
+    [],
+  );
+  const publicAnjumanOptions = useMemo(
+    () => [{ label: 'Select Anjuman participation', value: '' }, ...anjumanRequestOptions],
+    [],
+  );
 
   useEffect(() => {
     if (params.intent === 'event') setSelectedType('event');
@@ -75,13 +86,27 @@ export default function ConnectScreen() {
   const submit = async () => {
     setNotice('');
 
-    if (!form.name.trim() && !form.email.trim() && !form.phone.trim()) {
-      setNotice('Please include at least one contact field so we can follow up.');
-      return;
-    }
+    if (selectedType === 'event') {
+      const missingFields = [
+        ['Full name', form.name],
+        ['Email address', form.email],
+        ['Phone number', form.phone],
+        ['Event title', form.eventTitle],
+        ['Date', form.eventDate],
+        ['Time', form.eventTime],
+        ['Event address', form.eventAddress],
+        ['Event for', form.eventAudience],
+        ['Anjuman participation', form.requestsAnjuman],
+      ]
+        .filter(([, value]) => !String(value || '').trim())
+        .map(([field]) => field);
 
-    if (selectedType === 'event' && (!form.eventTitle.trim() || !form.eventDate.trim())) {
-      setNotice('Please include at least an event title and date.');
+      if (missingFields.length) {
+        setNotice(`Please complete: ${missingFields.join(', ')}.`);
+        return;
+      }
+    } else if (!form.name.trim() && !form.email.trim() && !form.phone.trim()) {
+      setNotice('Please include at least one contact field so we can follow up.');
       return;
     }
 
@@ -196,13 +221,13 @@ export default function ConnectScreen() {
                 <FormPicker
                   label="Event For"
                   value={form.eventAudience}
-                  options={eventAudienceOptions}
+                  options={publicAudienceOptions}
                   onChange={(value) => updateField('eventAudience', value)}
                 />
                 <FormPicker
                   label="Anjuman Participation"
                   value={form.requestsAnjuman}
-                  options={anjumanRequestOptions}
+                  options={publicAnjumanOptions}
                   onChange={(value) => updateField('requestsAnjuman', value)}
                 />
               </View>

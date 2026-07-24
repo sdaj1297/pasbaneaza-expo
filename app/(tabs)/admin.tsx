@@ -8,6 +8,7 @@ import { FormPicker } from '@/components/FormPicker';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { CommunityEvent, MajlisStatus, StatusItem, statusItems } from '@/data/mock';
 import {
+  AdminEventReviewInput,
   AdminEventSubmission,
   createEventFromSubmission,
   fetchAdminEvents,
@@ -133,18 +134,33 @@ export default function AdminScreen() {
     }
   };
 
-  const handleSubmissionAction = async (submission: AdminEventSubmission, mode: 'placeholder' | 'publish' | 'dismiss') => {
+  const handleSubmissionAction = async (
+    submission: AdminEventSubmission,
+    action: 'create' | 'approve' | 'dismiss',
+    review?: AdminEventReviewInput,
+  ) => {
     setEventsNotice('');
     setEventsBusy(true);
 
     try {
-      if (mode === 'dismiss') {
+      if (action === 'dismiss') {
         await updateEventSubmissionStatus(submission.id, 'dismissed');
         setEventsNotice('Submission dismissed.');
       } else {
-        await createEventFromSubmission(submission, mode);
-        setEventsNotice(mode === 'placeholder'
-          ? 'Placeholder created. This time slot is held for admin review.'
+        const nextReview = action === 'approve'
+          ? {
+              isAnjumanSchedule: review?.isAnjumanSchedule ?? true,
+              isPublished: true,
+              waitingApproval: false,
+              isPlaceholder: false,
+            }
+          : review;
+
+        if (!nextReview) throw new Error('Missing review decision.');
+
+        await createEventFromSubmission(submission, nextReview);
+        setEventsNotice(nextReview.waitingApproval || nextReview.isPlaceholder
+          ? 'Reviewed event created as a placeholder or pending item.'
           : 'Event approved and published.');
       }
       await refreshEvents();
@@ -384,10 +400,27 @@ function SubmissionCard({
 }: {
   submission: AdminEventSubmission;
   disabled: boolean;
-  onAction: (submission: AdminEventSubmission, mode: 'placeholder' | 'publish' | 'dismiss') => void;
+  onAction: (submission: AdminEventSubmission, action: 'create' | 'approve' | 'dismiss', review?: AdminEventReviewInput) => void;
 }) {
   const payload = submission.payload || {};
   const requestsAnjuman = Boolean(payload.requestsAnjuman || payload.addToSchedule || payload.ADDTOSCHD);
+  const [reviewDraft, setReviewDraft] = useState({
+    isAnjumanSchedule: requestsAnjuman ? 'yes' : 'no',
+    isPublished: 'yes',
+    waitingApproval: 'yes',
+    isPlaceholder: 'yes',
+  });
+
+  const updateReviewDraft = (field: keyof typeof reviewDraft, value: string) => {
+    setReviewDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const review: AdminEventReviewInput = {
+    isAnjumanSchedule: reviewDraft.isAnjumanSchedule === 'yes',
+    isPublished: reviewDraft.isPublished === 'yes',
+    waitingApproval: reviewDraft.waitingApproval === 'yes',
+    isPlaceholder: reviewDraft.isPlaceholder === 'yes',
+  };
 
   return (
     <Card>
@@ -404,12 +437,39 @@ function SubmissionCard({
       {payloadText(payload, 'eventAddress') ? <Text style={styles.address}>{payloadText(payload, 'eventAddress')}</Text> : null}
       {submission.message ? <Text style={styles.message}>{submission.message}</Text> : null}
 
+      <View style={styles.reviewGrid}>
+        <FormPicker
+          label="Add To Anjuman Schedule"
+          value={reviewDraft.isAnjumanSchedule}
+          options={yesNoOptions}
+          onChange={(value) => updateReviewDraft('isAnjumanSchedule', value)}
+        />
+        <FormPicker
+          label="Published"
+          value={reviewDraft.isPublished}
+          options={yesNoOptions}
+          onChange={(value) => updateReviewDraft('isPublished', value)}
+        />
+        <FormPicker
+          label="Waiting For Approval"
+          value={reviewDraft.waitingApproval}
+          options={yesNoOptions}
+          onChange={(value) => updateReviewDraft('waitingApproval', value)}
+        />
+        <FormPicker
+          label="Placeholder"
+          value={reviewDraft.isPlaceholder}
+          options={yesNoOptions}
+          onChange={(value) => updateReviewDraft('isPlaceholder', value)}
+        />
+      </View>
+
       <View style={styles.buttons}>
-        <Pressable disabled={disabled} onPress={() => onAction(submission, 'placeholder')} style={styles.button}>
-          <Text style={styles.buttonText}>Create Placeholder</Text>
+        <Pressable disabled={disabled} onPress={() => onAction(submission, 'create', review)} style={styles.button}>
+          <Text style={styles.buttonText}>Create With Settings</Text>
         </Pressable>
-        <Pressable disabled={disabled} onPress={() => onAction(submission, 'publish')} style={styles.activeButton}>
-          <Text style={styles.activeButtonText}>Approve & Publish</Text>
+        <Pressable disabled={disabled} onPress={() => onAction(submission, 'approve', review)} style={styles.activeButton}>
+          <Text style={styles.activeButtonText}>Quick Approve</Text>
         </Pressable>
         <Pressable disabled={disabled} onPress={() => onAction(submission, 'dismiss')} style={styles.ghostButton}>
           <Text style={styles.ghostButtonText}>Dismiss</Text>
@@ -478,7 +538,7 @@ function AdminEventEditor({
         <FormPicker label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
         <FormPicker label="Add To Anjuman Schedule" value={draft.isAnjumanSchedule} options={yesNoOptions} onChange={(value) => updateDraft('isAnjumanSchedule', value)} />
         <FormPicker label="Published" value={draft.isPublished} options={yesNoOptions} onChange={(value) => updateDraft('isPublished', value)} />
-        <FormPicker label="Waiting Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
+        <FormPicker label="Waiting For Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
         <FormPicker label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => updateDraft('isPlaceholder', value)} />
         <TextInput
           placeholder="Location name"
@@ -748,6 +808,12 @@ const styles = StyleSheet.create({
   reviewedStack: {
     gap: spacing.xs,
     marginTop: spacing.sm,
+  },
+  reviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   editorHeader: {
     alignItems: 'center',
