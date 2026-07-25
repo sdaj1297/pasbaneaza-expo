@@ -69,6 +69,7 @@ The beta passes integration QA when all of these are true:
 - Calendar export/download creates a usable `.ics` file with visible events.
 - Islamic month length changes persist and affect Hijri date calculations.
 - Public forms submit successfully or show a clear error.
+- The home-page "Become a Member" action opens the membership form directly.
 - Mobile layouts are readable, usable, and do not have overlapping text.
 
 ## Core Test Cases
@@ -256,9 +257,9 @@ Pass:
 
 Test form types:
 
-- Submit an event
+- Add Event
 - Reminders
-- Membership
+- Become a Member
 - Volunteer
 - Contact/general inquiry
 

@@ -77,7 +77,7 @@ export const islamicTodayLabel = '13 Muharram, 1448';
 
 export const announcements = [
   'Muharram programs are being updated daily. Please verify location and time before traveling.',
-  'Community members can submit new events for review through the events form.',
+  'Community members can add new events for review through the events form.',
 ];
 
 export const specialEvent: SpecialEvent = {

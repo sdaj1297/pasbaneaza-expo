@@ -140,6 +140,13 @@ export default function HomeScreen() {
               <CalendarDays color={colors.gold} size={17} strokeWidth={1.8} />
               <Text style={styles.hijriDate}>{currentIslamicLabel}</Text>
             </View>
+            <Link href="/connect?intent=membership" asChild>
+              <Pressable accessibilityLabel="Become a Member" style={styles.membershipButton}>
+                <Users color={colors.onIvory} size={17} strokeWidth={2} />
+                <Text style={styles.membershipButtonText}>Become a Member</Text>
+                <ArrowRight color={colors.goldDark} size={17} strokeWidth={2.2} />
+              </Pressable>
+            </Link>
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
@@ -420,6 +427,22 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.bodyMedium,
     fontSize: typography.body,
+  },
+  membershipButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.ivory,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+  },
+  membershipButtonText: {
+    color: colors.onIvory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   nextBlock: {
     borderLeftColor: colors.goldDark,

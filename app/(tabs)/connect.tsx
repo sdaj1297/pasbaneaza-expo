@@ -34,7 +34,7 @@ const signupTypes: {
 }[] = [
   {
     type: 'event',
-    title: 'Submit an event',
+    title: 'Add Event',
     description: 'Send a majlis or community program for review.',
     icon: CalendarPlus,
   },
@@ -46,7 +46,7 @@ const signupTypes: {
   },
   {
     type: 'membership',
-    title: 'Membership',
+    title: 'Become a Member',
     description: 'Join or update your family membership.',
     icon: Users,
   },
@@ -129,7 +129,8 @@ export default function ConnectScreen() {
   });
 
   useEffect(() => {
-    if (params.intent === 'event') setSelectedType('event');
+    const requestedType = signupTypes.find((item) => item.type === params.intent)?.type;
+    if (requestedType) setSelectedType(requestedType);
   }, [params.intent]);
 
   const updateField = (field: keyof FormState, value: string) => {

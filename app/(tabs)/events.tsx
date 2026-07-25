@@ -37,13 +37,13 @@ export default function EventsScreen() {
           <Text style={styles.headerEyebrow}>Houston community calendar</Text>
           <Text style={styles.headerTitle}>Find the next majlis</Text>
           <Text style={styles.headerText}>
-            Browse approved listings or submit a program for the Pasban team to review.
+            Browse approved listings or add a program for the Pasban team to review.
           </Text>
         </View>
         <Link href="/connect?intent=event" asChild>
           <Pressable style={styles.submitButton}>
             <Plus color={colors.onIvory} size={18} strokeWidth={2.2} />
-            <Text style={styles.submitText}>Submit an event</Text>
+            <Text style={styles.submitText}>Add Event</Text>
           </Pressable>
         </Link>
       </View>
@@ -75,7 +75,7 @@ export default function EventsScreen() {
         {!filtered.length ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No events in this view</Text>
-            <Text style={styles.emptyText}>Choose another audience or submit a new event for review.</Text>
+            <Text style={styles.emptyText}>Choose another audience or add a new event for review.</Text>
           </View>
         ) : null}
       </View>

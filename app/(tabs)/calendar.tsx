@@ -294,7 +294,7 @@ function SelectedDayAgenda({ day }: { day: CalendarDay }) {
         {!day.events.length ? (
           <View style={styles.emptyAgenda}>
             <Text style={styles.emptyAgendaTitle}>No programs listed</Text>
-            <Text style={styles.emptyAgendaText}>Choose another date or submit a community event for review.</Text>
+            <Text style={styles.emptyAgendaText}>Choose another date or add a community event for review.</Text>
           </View>
         ) : null}
       </View>

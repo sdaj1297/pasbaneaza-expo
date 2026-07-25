@@ -55,7 +55,7 @@ export function HomeScheduleBoard({
           <Link href="/connect?intent=event" asChild>
             <Pressable style={styles.submitButton}>
               <Plus color={colors.ivory} size={17} strokeWidth={2.3} />
-              <Text style={styles.submitButtonText}>Submit event</Text>
+              <Text style={styles.submitButtonText}>Add Event</Text>
             </Pressable>
           </Link>
         </View>

@@ -106,7 +106,7 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
               <Link href="/connect?intent=event" asChild>
                 <Pressable style={styles.submitNav}>
                   <Plus color={colors.onIvory} size={16} strokeWidth={2.2} />
-                  <Text style={styles.submitNavText}>Submit</Text>
+                  <Text style={styles.submitNavText}>Add Event</Text>
                 </Pressable>
               </Link>
               <Link href={accountHref} asChild>
