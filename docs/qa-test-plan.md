@@ -256,6 +256,7 @@ Pass:
 
 Test form types:
 
+- Submit an event
 - Reminders
 - Membership
 - Volunteer
@@ -267,6 +268,9 @@ Pass:
 - Required fields are clear.
 - Bad input shows a useful error or does not silently fail.
 - No sensitive private data is required for beta testing.
+- Fields follow a consistent vertical rhythm without large empty blocks between controls.
+- Paired fields form equal columns on desktop and stack cleanly on mobile.
+- Opening a date, time, audience, or admin picker does not stretch neighboring fields.
 
 ## Visual QA
 
@@ -276,6 +280,7 @@ Check:
 - Buttons are easy to tap on mobile.
 - No tiny unreadable text.
 - Long names and addresses wrap cleanly.
+- Public, login, and admin forms have no unexplained gaps or horizontal overflow.
 - Calendar cells remain stable when many events exist.
 - The Pasban-e-Aza logo is clear.
 - Dark theme contrast is comfortable.

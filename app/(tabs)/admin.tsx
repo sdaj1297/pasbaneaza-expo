@@ -414,24 +414,28 @@ function SubmissionCard({
 
       <View style={styles.reviewGrid}>
         <FormPicker
+          layout="grid"
           label="Add To Anjuman Schedule"
           value={reviewDraft.isAnjumanSchedule}
           options={yesNoOptions}
           onChange={(value) => updateReviewDraft('isAnjumanSchedule', value)}
         />
         <FormPicker
+          layout="grid"
           label="Published"
           value={reviewDraft.isPublished}
           options={yesNoOptions}
           onChange={(value) => updateReviewDraft('isPublished', value)}
         />
         <FormPicker
+          layout="grid"
           label="Waiting For Approval"
           value={reviewDraft.waitingApproval}
           options={yesNoOptions}
           onChange={(value) => updateReviewDraft('waitingApproval', value)}
         />
         <FormPicker
+          layout="grid"
           label="Placeholder"
           value={reviewDraft.isPlaceholder}
           options={yesNoOptions}
@@ -713,6 +717,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   reviewGrid: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,

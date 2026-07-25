@@ -245,12 +245,14 @@ export default function ConnectScreen() {
           <View style={styles.form}>
             <View style={styles.fieldRow}>
               <LabeledInput
+                layout="grid"
                 label="Full name"
                 required={selectedType === 'event'}
                 value={form.name}
                 onChangeText={(value) => updateField('name', value)}
               />
               <LabeledInput
+                layout="grid"
                 label="Email address"
                 required={selectedType === 'event'}
                 value={form.email}
@@ -277,6 +279,7 @@ export default function ConnectScreen() {
                 />
                 <View style={styles.fieldRow}>
                   <FormPicker
+                    layout="grid"
                     label="Date · required"
                     tone="light"
                     value={form.eventDate}
@@ -284,6 +287,7 @@ export default function ConnectScreen() {
                     onChange={(value) => updateField('eventDate', value)}
                   />
                   <FormPicker
+                    layout="grid"
                     label="Time · required"
                     tone="light"
                     value={form.eventTime}
@@ -299,6 +303,7 @@ export default function ConnectScreen() {
                 />
                 <View style={styles.fieldRow}>
                   <FormPicker
+                    layout="grid"
                     label="Event for · required"
                     tone="light"
                     value={form.eventAudience}
@@ -306,6 +311,7 @@ export default function ConnectScreen() {
                     onChange={(value) => updateField('eventAudience', value)}
                   />
                   <FormPicker
+                    layout="grid"
                     label="Anjuman participation · required"
                     tone="light"
                     value={form.requestsAnjuman}
@@ -352,6 +358,7 @@ function LabeledInput({
   placeholder,
   value,
   keyboardType,
+  layout = 'stacked',
   onChangeText,
 }: {
   label: string;
@@ -360,10 +367,11 @@ function LabeledInput({
   placeholder?: string;
   value: string;
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  layout?: 'stacked' | 'grid';
   onChangeText: (value: string) => void;
 }) {
   return (
-    <View style={styles.inputField}>
+    <View style={[styles.inputField, layout === 'grid' && styles.gridInputField]}>
       <Text style={styles.inputLabel}>{label}{required ? ' · required' : ''}</Text>
       <TextInput
         placeholder={placeholder || label}
@@ -511,14 +519,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   fieldRow: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
   },
   inputField: {
+    gap: spacing.xs,
+    minWidth: 0,
+    width: '100%',
+  },
+  gridInputField: {
     flex: 1,
     flexBasis: 220,
-    gap: spacing.xs,
+    width: 'auto',
   },
   inputLabel: {
     color: colors.onIvoryMuted,

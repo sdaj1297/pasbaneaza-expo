@@ -97,13 +97,13 @@ export function AdminEventForm({
             onChangeText={(value) => updateDraft('contactName', value)}
           />
         </Field>
-        <FormPicker label="Date" value={draft.date} options={currentDateOptions} onChange={(value) => updateDraft('date', value)} />
-        <FormPicker label="Time" value={draft.time} options={currentTimeOptions} onChange={(value) => updateDraft('time', value)} />
-        <FormPicker label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
-        <FormPicker label="Add To Anjuman Schedule" value={draft.isAnjumanSchedule} options={yesNoOptions} onChange={(value) => updateDraft('isAnjumanSchedule', value)} />
-        <FormPicker label="Published" value={draft.isPublished} options={yesNoOptions} onChange={(value) => updateDraft('isPublished', value)} />
-        <FormPicker label="Waiting For Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
-        <FormPicker label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => updateDraft('isPlaceholder', value)} />
+        <FormPicker layout="grid" label="Date" value={draft.date} options={currentDateOptions} onChange={(value) => updateDraft('date', value)} />
+        <FormPicker layout="grid" label="Time" value={draft.time} options={currentTimeOptions} onChange={(value) => updateDraft('time', value)} />
+        <FormPicker layout="grid" label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
+        <FormPicker layout="grid" label="Add To Anjuman Schedule" value={draft.isAnjumanSchedule} options={yesNoOptions} onChange={(value) => updateDraft('isAnjumanSchedule', value)} />
+        <FormPicker layout="grid" label="Published" value={draft.isPublished} options={yesNoOptions} onChange={(value) => updateDraft('isPublished', value)} />
+        <FormPicker layout="grid" label="Waiting For Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
+        <FormPicker layout="grid" label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => updateDraft('isPlaceholder', value)} />
         <Field label="Location name">
           <TextInput
             placeholder="Location name"
@@ -208,6 +208,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   editorGrid: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,

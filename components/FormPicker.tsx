@@ -14,10 +14,18 @@ type FormPickerProps = {
   value: string;
   options: Option[];
   onChange: (value: string) => void;
+  layout?: 'stacked' | 'grid';
   tone?: 'dark' | 'light';
 };
 
-export function FormPicker({ label, value, options, onChange, tone = 'dark' }: FormPickerProps) {
+export function FormPicker({
+  label,
+  value,
+  options,
+  onChange,
+  layout = 'stacked',
+  tone = 'dark',
+}: FormPickerProps) {
   const [open, setOpen] = useState(false);
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value) || options[0],
@@ -30,7 +38,7 @@ export function FormPicker({ label, value, options, onChange, tone = 'dark' }: F
   };
 
   return (
-    <View style={styles.field}>
+    <View style={[styles.field, layout === 'grid' && styles.gridField]}>
       <Text style={[styles.label, tone === 'light' && styles.lightLabel]}>{label}</Text>
       <Pressable
         accessibilityRole="button"
@@ -70,6 +78,7 @@ export function FormPicker({ label, value, options, onChange, tone = 'dark' }: F
                   ]}
                 >
                   <Text
+                    numberOfLines={2}
                     style={[
                       selected ? styles.activeOptionText : styles.optionText,
                       !selected && tone === 'light' && styles.lightOptionText,
@@ -90,9 +99,14 @@ export function FormPicker({ label, value, options, onChange, tone = 'dark' }: F
 
 const styles = StyleSheet.create({
   field: {
+    gap: spacing.xs,
+    minWidth: 0,
+    width: '100%',
+  },
+  gridField: {
     flexBasis: 220,
     flexGrow: 1,
-    gap: spacing.xs,
+    width: 'auto',
   },
   label: {
     color: colors.muted,
@@ -170,15 +184,19 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: colors.ink,
+    flex: 1,
     fontFamily: fonts.bodyMedium,
     fontSize: 15,
+    paddingRight: spacing.sm,
   },
   lightOptionText: {
     color: colors.onIvory,
   },
   activeOptionText: {
     color: colors.onIvory,
+    flex: 1,
     fontFamily: fonts.bodyBold,
     fontSize: 15,
+    paddingRight: spacing.sm,
   },
 });
