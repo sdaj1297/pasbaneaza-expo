@@ -266,6 +266,7 @@ Pass:
 
 - Valid submissions succeed.
 - Required fields are clear.
+- Required event fields use a visible asterisk and are announced as required by assistive technology.
 - Bad input shows a useful error or does not silently fail.
 - No sensitive private data is required for beta testing.
 - Fields follow a consistent vertical rhythm without large empty blocks between controls.
@@ -281,6 +282,7 @@ Check:
 - No tiny unreadable text.
 - Long names and addresses wrap cleanly.
 - Public, login, and admin forms have no unexplained gaps or horizontal overflow.
+- Login shows a visible Forgot password action rather than an unlabeled or empty control.
 - Calendar cells remain stable when many events exist.
 - The Pasban-e-Aza logo is clear.
 - Dark theme contrast is comfortable.

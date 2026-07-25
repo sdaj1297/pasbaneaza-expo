@@ -241,6 +241,11 @@ export default function ConnectScreen() {
               ? 'Submissions remain pending until the Pasban team confirms and publishes them.'
               : 'Share your contact details and the Pasban team will follow up.'}
           </Text>
+          {selectedType === 'event' ? (
+            <Text style={styles.requiredNote}>
+              <Text style={styles.requiredMark}>*</Text> Fields marked with an asterisk must be completed.
+            </Text>
+          ) : null}
 
           <View style={styles.form}>
             <View style={styles.fieldRow}>
@@ -280,7 +285,8 @@ export default function ConnectScreen() {
                 <View style={styles.fieldRow}>
                   <FormPicker
                     layout="grid"
-                    label="Date · required"
+                    label="Date"
+                    required
                     tone="light"
                     value={form.eventDate}
                     options={dateOptions}
@@ -288,7 +294,8 @@ export default function ConnectScreen() {
                   />
                   <FormPicker
                     layout="grid"
-                    label="Time · required"
+                    label="Time"
+                    required
                     tone="light"
                     value={form.eventTime}
                     options={timeOptions}
@@ -304,7 +311,8 @@ export default function ConnectScreen() {
                 <View style={styles.fieldRow}>
                   <FormPicker
                     layout="grid"
-                    label="Event for · required"
+                    label="Event for"
+                    required
                     tone="light"
                     value={form.eventAudience}
                     options={publicAudienceOptions}
@@ -312,7 +320,8 @@ export default function ConnectScreen() {
                   />
                   <FormPicker
                     layout="grid"
-                    label="Anjuman participation · required"
+                    label="Anjuman participation"
+                    required
                     tone="light"
                     value={form.requestsAnjuman}
                     options={publicAnjumanOptions}
@@ -372,8 +381,12 @@ function LabeledInput({
 }) {
   return (
     <View style={[styles.inputField, layout === 'grid' && styles.gridInputField]}>
-      <Text style={styles.inputLabel}>{label}{required ? ' · required' : ''}</Text>
+      <Text style={styles.inputLabel}>
+        {label}
+        {required ? <Text style={styles.requiredMark}> *</Text> : null}
+      </Text>
       <TextInput
+        accessibilityLabel={`${label}${required ? ', required' : ''}`}
         placeholder={placeholder || label}
         placeholderTextColor={colors.onIvoryMuted}
         style={[styles.input, multiline && styles.textArea]}
@@ -513,6 +526,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: spacing.sm,
     maxWidth: 620,
+  },
+  requiredNote: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+  },
+  requiredMark: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
   },
   form: {
     gap: spacing.md,

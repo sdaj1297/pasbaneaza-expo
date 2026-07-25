@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { KeyRound, Mail } from 'lucide-react-native';
-import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
@@ -107,9 +107,14 @@ export default function LoginScreen() {
             <ActionButton disabled={isBusy} onPress={login}>
               {isBusy ? 'Signing in...' : 'Sign in'}
             </ActionButton>
-            <ActionButton disabled={isBusy} variant="outline" onPress={resetPassword}>
-              Reset password
-            </ActionButton>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={resetPassword}
+              style={[styles.resetLink, isBusy && styles.disabledAction]}
+            >
+              <Text style={styles.resetLinkText}>Forgot password?</Text>
+            </Pressable>
           </View>
           {notice ? <Text style={styles.notice}>{notice}</Text> : null}
         </View>
@@ -227,10 +232,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   actions: {
+    alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.lg,
+  },
+  resetLink: {
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
+  resetLinkText: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  disabledAction: {
+    opacity: 0.46,
   },
   notice: {
     color: colors.oxblood,

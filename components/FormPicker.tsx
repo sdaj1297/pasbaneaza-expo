@@ -15,6 +15,7 @@ type FormPickerProps = {
   options: Option[];
   onChange: (value: string) => void;
   layout?: 'stacked' | 'grid';
+  required?: boolean;
   tone?: 'dark' | 'light';
 };
 
@@ -24,6 +25,7 @@ export function FormPicker({
   options,
   onChange,
   layout = 'stacked',
+  required = false,
   tone = 'dark',
 }: FormPickerProps) {
   const [open, setOpen] = useState(false);
@@ -39,8 +41,12 @@ export function FormPicker({
 
   return (
     <View style={[styles.field, layout === 'grid' && styles.gridField]}>
-      <Text style={[styles.label, tone === 'light' && styles.lightLabel]}>{label}</Text>
+      <Text style={[styles.label, tone === 'light' && styles.lightLabel]}>
+        {label}
+        {required ? <Text style={styles.requiredMark}> *</Text> : null}
+      </Text>
       <Pressable
+        accessibilityLabel={`${label}${required ? ', required' : ''}: ${selectedOption?.label || 'Not selected'}`}
         accessibilityRole="button"
         onPress={() => setOpen((current) => !current)}
         style={[styles.trigger, tone === 'light' && styles.lightTrigger]}
@@ -115,6 +121,9 @@ const styles = StyleSheet.create({
   },
   lightLabel: {
     color: colors.onIvoryMuted,
+  },
+  requiredMark: {
+    color: colors.oxblood,
   },
   trigger: {
     alignItems: 'center',
