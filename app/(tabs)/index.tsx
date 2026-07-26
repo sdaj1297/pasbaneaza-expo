@@ -898,7 +898,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xxl,
-    minHeight: 820,
     width: '100%',
   },
   compactFlyerStage: {
