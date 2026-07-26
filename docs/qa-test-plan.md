@@ -64,6 +64,8 @@ The beta passes integration QA when all of these are true:
 - Anjuman schedule views only show events marked for the Anjuman schedule.
 - "Today" behavior follows Houston time.
 - Majlis status updates persist after refresh and are visible from another device.
+- The homepage replaces "Next committed majlis" with a compact live timeline for En Route, Started, or Delayed majalis.
+- Completed and Skipped majalis leave the homepage timeline and the next eligible committed majlis is shown.
 - Calendar shows a full month grid with events on the correct dates.
 - Calendar filters change the visible events correctly.
 - Calendar export/download creates a usable `.ics` file with visible events.

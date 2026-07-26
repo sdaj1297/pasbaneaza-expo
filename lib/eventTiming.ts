@@ -3,6 +3,11 @@ import type { CommunityEvent, StatusItem } from '@/data/mock';
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const activeStatuses = new Set(['Started', 'En Route', 'Delayed']);
 const finishedStatuses = new Set(['Completed', 'Skipped']);
+const activeStatusPriority: Partial<Record<StatusItem['status'], number>> = {
+  Started: 0,
+  'En Route': 1,
+  Delayed: 2,
+};
 
 export function filterUpcomingEvents(
   events: CommunityEvent[],
@@ -31,6 +36,16 @@ export function selectNextCommittedEvent(
 
   return upcomingCommitted.find((event) => activeStatuses.has(statusByEventId.get(event.id) || ''))
     || upcomingCommitted[0];
+}
+
+export function selectActiveMajlisStatus(statuses: StatusItem[]) {
+  return [...statuses]
+    .filter((item) => activeStatuses.has(item.status))
+    .sort((left, right) => {
+      const statusOrder = (activeStatusPriority[left.status] ?? Number.MAX_SAFE_INTEGER)
+        - (activeStatusPriority[right.status] ?? Number.MAX_SAFE_INTEGER);
+      return statusOrder || compareEvents(left, right);
+    })[0];
 }
 
 export function isActiveMajlis(eventId: string, statuses: StatusItem[]) {

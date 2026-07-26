@@ -27,6 +27,7 @@ export type PrayerTime = {
 export type StatusItem = CommunityEvent & {
   status: MajlisStatus;
   stage?: string;
+  updatedAt?: string;
 };
 
 export type SpecialEvent = {

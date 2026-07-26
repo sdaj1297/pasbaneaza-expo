@@ -43,8 +43,10 @@ import { formatGregorianDate, getRelativeDateLabel } from '@/lib/datePresentatio
 import {
   filterUpcomingEvents,
   isActiveMajlis,
+  selectActiveMajlisStatus,
   selectNextCommittedEvent,
 } from '@/lib/eventTiming';
+import { majlisStages } from '@/lib/majlisStatus';
 
 const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eventType: string) => boolean> = {
   brothers: (eventType) => ['M', 'F', 'A'].includes(eventType),
@@ -112,6 +114,7 @@ export default function HomeScreen() {
     [currentDate, mergedEvents],
   );
   const nextAnjuman = selectNextCommittedEvent(mergedEvents, liveStatuses, clock);
+  const activeMajlis = selectActiveMajlisStatus(liveStatuses);
   const nextAnjumanIsActive = nextAnjuman ? isActiveMajlis(nextAnjuman.id, liveStatuses) : false;
   const nextDateRelation = nextAnjuman
     ? getRelativeDateLabel(nextAnjuman.date, currentDate)
@@ -150,39 +153,13 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
-            <Text style={styles.nextLabel}>{nextMajlisLabel}</Text>
-            {nextAnjuman ? (
-              <>
-                <View style={styles.nextDateRow}>
-                  <CalendarDays color={colors.gold} size={16} strokeWidth={1.8} />
-                  <View style={styles.nextDateCopy}>
-                    <Text style={styles.nextGregorianDate}>
-                      {formatGregorianDate(nextAnjuman.date, 'long')}
-                    </Text>
-                    {nextAnjuman.islamicDate ? (
-                      <Text style={styles.nextIslamicDate}>{nextAnjuman.islamicDate}</Text>
-                    ) : null}
-                  </View>
-                </View>
-                <View style={styles.nextTitleRow}>
-                  <Text style={styles.nextTime}>{nextAnjuman.time || 'TBA'}</Text>
-                  <View style={styles.nextRule} />
-                  <Text style={styles.nextHost}>{nextAnjuman.contactName || nextAnjuman.title}</Text>
-                </View>
-                <Text style={styles.nextProgram}>{nextAnjuman.title}</Text>
-                <Pressable
-                  disabled={!nextAnjuman.address}
-                  onPress={() => openMaps(nextAnjuman.address)}
-                  style={styles.locationLink}
-                >
-                  <MapPin color={colors.gold} size={16} strokeWidth={1.8} />
-                  <Text style={styles.locationText}>
-                    {nextAnjuman.locationName || nextAnjuman.address || 'Location to be announced'}
-                  </Text>
-                </Pressable>
-              </>
+            {activeMajlis ? (
+              <HomeLiveMajlis item={activeMajlis} />
             ) : (
-              <Text style={styles.nextProgram}>No committed program is currently listed.</Text>
+              <NextMajlis
+                item={nextAnjuman}
+                label={nextMajlisLabel}
+              />
             )}
           </View>
         </View>
@@ -244,6 +221,139 @@ export default function HomeScreen() {
       </AppShell>
     </>
   );
+}
+
+function NextMajlis({
+  item,
+  label,
+}: {
+  item?: CommunityEvent;
+  label: string;
+}) {
+  return (
+    <>
+      <Text style={styles.nextLabel}>{label}</Text>
+      {item ? (
+        <>
+          <View style={styles.nextDateRow}>
+            <CalendarDays color={colors.gold} size={16} strokeWidth={1.8} />
+            <View style={styles.nextDateCopy}>
+              <Text style={styles.nextGregorianDate}>
+                {formatGregorianDate(item.date, 'long')}
+              </Text>
+              {item.islamicDate ? (
+                <Text style={styles.nextIslamicDate}>{item.islamicDate}</Text>
+              ) : null}
+            </View>
+          </View>
+          <View style={styles.nextTitleRow}>
+            <Text style={styles.nextTime}>{item.time || 'TBA'}</Text>
+            <View style={styles.nextRule} />
+            <Text style={styles.nextHost}>{item.contactName || item.title}</Text>
+          </View>
+          <Text style={styles.nextProgram}>{item.title}</Text>
+          <Pressable
+            disabled={!item.address}
+            onPress={() => openMaps(item.address)}
+            style={styles.locationLink}
+          >
+            <MapPin color={colors.gold} size={16} strokeWidth={1.8} />
+            <Text style={styles.locationText}>
+              {item.locationName || item.address || 'Location to be announced'}
+            </Text>
+          </Pressable>
+        </>
+      ) : (
+        <Text style={styles.nextProgram}>No committed program is currently listed.</Text>
+      )}
+    </>
+  );
+}
+
+const liveTimelineSteps = ['En Route', ...majlisStages, 'Completed'] as const;
+
+function HomeLiveMajlis({ item }: { item: StatusItem }) {
+  const stageIndex = majlisStages.findIndex((stage) => stage === item.stage);
+  const activeStep = item.status === 'Started' ? Math.max(1, stageIndex + 1) : 0;
+  const progress = `${Math.round((activeStep / (liveTimelineSteps.length - 1)) * 100)}%` as const;
+  const currentLabel = item.status === 'Started'
+    ? item.stage || majlisStages[0]
+    : item.status;
+  const updatedLabel = formatStatusUpdate(item.updatedAt);
+
+  return (
+    <>
+      <View style={styles.liveStatusHeading}>
+        <View style={styles.liveStatusLabelRow}>
+          <View style={[styles.liveStatusDot, item.status === 'Delayed' && styles.delayedStatusDot]} />
+          <Text style={[styles.nextLabel, item.status === 'Delayed' && styles.delayedStatusLabel]}>
+            {item.status === 'Delayed' ? 'Route delayed' : 'Live majlis progress'}
+          </Text>
+        </View>
+        <Text style={styles.liveCurrentStage}>{currentLabel}</Text>
+      </View>
+
+      <View style={styles.nextTitleRow}>
+        <Text style={styles.nextTime}>{item.time || 'TBA'}</Text>
+        <View style={styles.nextRule} />
+        <Text style={styles.nextHost}>{item.contactName || item.title}</Text>
+      </View>
+      <Text style={styles.nextProgram}>{item.title}</Text>
+
+      <View
+        accessibilityLabel={`Majlis progress: ${currentLabel}`}
+        style={styles.liveTimeline}
+      >
+        <View style={styles.liveTimelineLine} />
+        <View style={[styles.liveTimelineFill, { width: progress }]} />
+        <View style={styles.liveTimelineNodes}>
+          {liveTimelineSteps.map((step, index) => (
+            <View
+              key={step}
+              style={[
+                styles.liveTimelineNode,
+                index <= activeStep && styles.completedTimelineNode,
+                index === activeStep && styles.activeTimelineNode,
+                item.status === 'Delayed' && index === activeStep && styles.delayedTimelineNode,
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+      <View style={styles.liveTimelineLabels}>
+        <Text style={styles.liveTimelineLabel}>En route</Text>
+        <Text style={styles.liveTimelineCurrent}>{currentLabel}</Text>
+        <Text style={styles.liveTimelineLabel}>Complete</Text>
+      </View>
+
+      <View style={styles.liveStatusFooter}>
+        <View style={styles.liveStatusMeta}>
+          <MapPin color={colors.gold} size={15} strokeWidth={1.8} />
+          <Text numberOfLines={1} style={styles.locationText}>
+            {item.locationName || item.address || 'Location to be announced'}
+          </Text>
+          {updatedLabel ? <Text style={styles.liveUpdated}>{updatedLabel}</Text> : null}
+        </View>
+        <Link href="/status" asChild>
+          <Pressable style={styles.liveStatusLink}>
+            <Text style={styles.liveStatusLinkText}>View live status</Text>
+            <ArrowRight color={colors.gold} size={17} strokeWidth={2} />
+          </Pressable>
+        </Link>
+      </View>
+    </>
+  );
+}
+
+function formatStatusUpdate(value?: string) {
+  if (!value) return '';
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return '';
+  return `Updated ${new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Chicago',
+  }).format(timestamp)}`;
 }
 
 function AtAGlance({
@@ -465,6 +575,127 @@ const styles = StyleSheet.create({
     fontSize: typography.overline,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
+  },
+  liveStatusHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  liveStatusLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  liveStatusDot: {
+    backgroundColor: colors.red,
+    borderRadius: 999,
+    height: 8,
+    width: 8,
+  },
+  delayedStatusDot: {
+    backgroundColor: colors.gold,
+  },
+  delayedStatusLabel: {
+    color: colors.goldSoft,
+  },
+  liveCurrentStage: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  liveTimeline: {
+    height: 12,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    position: 'relative',
+  },
+  liveTimelineLine: {
+    backgroundColor: colors.border,
+    height: 2,
+    left: 5,
+    position: 'absolute',
+    right: 5,
+  },
+  liveTimelineFill: {
+    backgroundColor: colors.goldDark,
+    height: 2,
+    left: 5,
+    position: 'absolute',
+  },
+  liveTimelineNodes: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  liveTimelineNode: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 10,
+    width: 10,
+  },
+  completedTimelineNode: {
+    backgroundColor: colors.goldDark,
+    borderColor: colors.goldDark,
+  },
+  activeTimelineNode: {
+    backgroundColor: colors.gold,
+    borderColor: colors.ink,
+    height: 12,
+    width: 12,
+  },
+  delayedTimelineNode: {
+    backgroundColor: colors.red,
+  },
+  liveTimelineLabels: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
+  liveTimelineLabel: {
+    color: colors.textSubtle,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+  },
+  liveTimelineCurrent: {
+    color: colors.goldSoft,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+  },
+  liveStatusFooter: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
+  liveStatusMeta: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minWidth: 200,
+  },
+  liveUpdated: {
+    color: colors.textSubtle,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.overline,
+  },
+  liveStatusLink: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 34,
+  },
+  liveStatusLinkText: {
+    color: colors.goldSoft,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   nextDateRow: {
     alignItems: 'flex-start',

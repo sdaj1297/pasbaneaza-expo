@@ -183,6 +183,7 @@ export async function fetchTodayMajlisFromFirebase(): Promise<StatusItem[]> {
         ...event,
         status,
         stage: typeof statusData.stage === 'string' && statusData.stage.trim() ? statusData.stage : undefined,
+        updatedAt: normalizeTimestamp(statusData.updatedAt) || undefined,
       };
     });
 
