@@ -45,7 +45,6 @@ import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 import { formatGregorianDate, getRelativeDateLabel } from '@/lib/datePresentation';
 import {
   filterUpcomingEvents,
-  isActiveMajlis,
   selectActiveMajlisStatus,
   selectNextCommittedEvent,
 } from '@/lib/eventTiming';
@@ -129,19 +128,22 @@ export default function HomeScreen() {
     () => mergedEvents.filter((event) => event.date === currentDate),
     [currentDate, mergedEvents],
   );
-  const nextAnjuman = selectNextCommittedEvent(mergedEvents, liveStatuses, clock);
   const activeMajlis = selectActiveMajlisStatus(liveStatuses);
-  const nextAnjumanIsActive = nextAnjuman ? isActiveMajlis(nextAnjuman.id, liveStatuses) : false;
+  const nextAnjuman = selectNextCommittedEvent(
+    activeMajlis
+      ? mergedEvents.filter((event) => event.id !== activeMajlis.id)
+      : mergedEvents,
+    liveStatuses,
+    clock,
+  );
   const nextDateRelation = nextAnjuman
     ? getRelativeDateLabel(nextAnjuman.date, currentDate)
     : '';
-  const nextMajlisLabel = nextAnjumanIsActive
-    ? 'Current committed majlis'
-    : nextDateRelation === 'Today'
-      ? 'Later today'
-      : nextDateRelation === 'Tomorrow'
-        ? "Tomorrow's committed majlis"
-        : 'Next committed majlis';
+  const nextMajlisLabel = nextDateRelation === 'Today'
+    ? 'Later today'
+    : nextDateRelation === 'Tomorrow'
+      ? "Tomorrow's committed majlis"
+      : 'Next committed majlis';
   const hasRealFlyer = Boolean(featured?.isActive && featured.flyerUrl);
   const hasLiveStream = Boolean(
     featured?.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
@@ -162,6 +164,12 @@ export default function HomeScreen() {
     <>
       <Stack.Screen options={{ title: 'Anjuman Pasban-e-Aza · Houston' }} />
       <AppShell title="Anjuman Pasban-e-Aza">
+        {activeMajlis ? (
+          <View style={[styles.liveMajlisHero, compact && styles.compactLiveMajlisHero]}>
+            <HomeLiveMajlis item={activeMajlis} />
+          </View>
+        ) : null}
+
         {hasRealFlyer ? (
           <FeaturedFlyer event={featured} viewportHeight={height} viewportWidth={width} />
         ) : null}
@@ -184,14 +192,10 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
-            {activeMajlis ? (
-              <HomeLiveMajlis item={activeMajlis} />
-            ) : (
-              <NextMajlis
-                item={nextAnjuman}
-                label={nextMajlisLabel}
-              />
-            )}
+            <NextMajlis
+              item={nextAnjuman}
+              label={nextMajlisLabel}
+            />
           </View>
         </View>
 
@@ -534,6 +538,17 @@ function dedupeEvents(events: CommunityEvent[]) {
 }
 
 const styles = StyleSheet.create({
+  liveMajlisHero: {
+    backgroundColor: colors.committedBg,
+    borderColor: colors.committedBorder,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
+  },
+  compactLiveMajlisHero: {
+    padding: spacing.md,
+  },
   todayHero: {
     alignItems: 'stretch',
     flexDirection: 'row',
