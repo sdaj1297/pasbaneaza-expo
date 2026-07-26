@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   Camera,
+  Maximize2,
   MapPin,
   Play,
   Radio,
@@ -12,7 +13,6 @@ import {
 } from 'lucide-react-native';
 import {
   Image,
-  ImageBackground,
   Linking,
   Pressable,
   StyleSheet,
@@ -191,7 +191,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {hasRealFlyer ? <FeaturedFlyer event={featured} /> : null}
+        {hasRealFlyer ? <FeaturedFlyer compact={compact} event={featured} /> : null}
 
         <View style={styles.primaryGrid}>
           <View style={styles.schedulePane}>
@@ -439,16 +439,40 @@ function PrayerPreview({ times }: { times: PrayerTime[] }) {
   );
 }
 
-function FeaturedFlyer({ event }: { event: SpecialEvent }) {
+function FeaturedFlyer({ compact, event }: { compact: boolean; event: SpecialEvent }) {
+  const openFlyer = () => {
+    if (event.flyerUrl) Linking.openURL(event.flyerUrl);
+  };
+
   return (
-    <ImageBackground source={{ uri: event.flyerUrl }} style={styles.flyer} imageStyle={styles.flyerImage}>
-      <View style={styles.flyerOverlay}>
+    <View style={[styles.flyerFeature, compact && styles.compactFlyerFeature]}>
+      <Pressable
+        accessibilityHint="Opens the complete event flyer"
+        accessibilityLabel={`View the full ${event.title} flyer`}
+        onPress={openFlyer}
+        style={[styles.flyerPosterButton, compact && styles.compactFlyerPosterButton]}
+      >
+        <Image
+          resizeMode="contain"
+          source={{ uri: event.flyerUrl }}
+          style={styles.flyerPoster}
+        />
+      </Pressable>
+      <View style={styles.flyerContent}>
         <Text style={styles.flyerEyebrow}>{event.eyebrow}</Text>
         <Text style={styles.flyerTitle}>{event.title}</Text>
         <Text style={styles.flyerDate}>{event.dateLabel}</Text>
         <Text style={styles.flyerDescription}>{event.description}</Text>
+        <Pressable
+          accessibilityLabel={`View the full ${event.title} flyer`}
+          onPress={openFlyer}
+          style={styles.flyerAction}
+        >
+          <Maximize2 color={colors.goldSoft} size={17} strokeWidth={2} />
+          <Text style={styles.flyerActionText}>View full flyer</Text>
+        </Pressable>
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -877,21 +901,47 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     fontSize: typography.body,
   },
-  flyer: {
+  flyerFeature: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xl,
     marginBottom: spacing.lg,
-    minHeight: 360,
+    minHeight: 416,
     overflow: 'hidden',
+    padding: spacing.lg,
   },
-  flyerImage: {
+  compactFlyerFeature: {
+    alignItems: 'stretch',
+    gap: spacing.md,
+    minHeight: 252,
+    padding: spacing.sm,
+  },
+  flyerPosterButton: {
+    alignSelf: 'center',
+    backgroundColor: colors.paper,
     borderRadius: radii.md,
+    height: 368,
+    overflow: 'hidden',
+    width: 207,
   },
-  flyerOverlay: {
-    backgroundColor: 'rgba(9, 8, 7, .7)',
+  compactFlyerPosterButton: {
+    height: 224,
+    width: 126,
+  },
+  flyerPoster: {
     flex: 1,
-    justifyContent: 'flex-end',
-    minHeight: 360,
-    padding: spacing.xl,
+    height: '100%',
+    width: '100%',
+  },
+  flyerContent: {
+    alignItems: 'flex-start',
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
   },
   flyerEyebrow: {
     color: colors.gold,
@@ -903,8 +953,8 @@ const styles = StyleSheet.create({
   flyerTitle: {
     color: colors.ivory,
     fontFamily: fonts.displayMedium,
-    fontSize: 48,
-    lineHeight: 52,
+    fontSize: 38,
+    lineHeight: 42,
     marginTop: spacing.sm,
   },
   flyerDate: {
@@ -920,6 +970,23 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: spacing.sm,
     maxWidth: 680,
+  },
+  flyerAction: {
+    alignItems: 'center',
+    borderColor: colors.goldDark,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  flyerActionText: {
+    color: colors.goldSoft,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
   },
   featuredNotice: {
     backgroundColor: colors.oxblood,
