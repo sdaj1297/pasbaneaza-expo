@@ -447,10 +447,10 @@ function CommunityLinks() {
     <View style={styles.railSection}>
       <Text style={styles.railEyebrow}>Stay connected</Text>
       <View style={styles.communityActions}>
-        <Link href="/connect" asChild>
+        <Link href="/connect?intent=reminder" asChild>
           <Pressable style={styles.communityAction}>
             <Bell color={colors.muted} size={18} strokeWidth={1.8} />
-            <Text style={styles.communityActionText}>Reminders</Text>
+            <Text style={styles.communityActionText}>Announcements</Text>
           </Pressable>
         </Link>
         <Link href="/connect" asChild>

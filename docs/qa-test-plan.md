@@ -261,7 +261,7 @@ Pass:
 Test form types:
 
 - Add Event
-- Reminders
+- Announcements & Reminders
 - Become a Member
 - Volunteer
 - Contact/general inquiry
@@ -276,6 +276,10 @@ Pass:
 - Fields follow a consistent vertical rhythm without large empty blocks between controls.
 - Paired fields form equal columns on desktop and stack cleanly on mobile.
 - Opening a date, time, audience, or admin picker does not stretch neighboring fields.
+- Announcements signup requires a full name, phone number, and explicit WhatsApp consent.
+- Announcements signup does not show a generic notes or interests field.
+- A successful announcements signup shows a button to join the Pasban WhatsApp group.
+- The WhatsApp action opens the configured Pasban announcements invite.
 
 ## Visual QA
 

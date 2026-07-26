@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import {
+  ArrowUpRight,
   Bell,
   CalendarPlus,
   Camera,
+  Check,
   Globe2,
   HandHeart,
   MessageCircle,
@@ -26,6 +28,8 @@ import {
   eventAudienceOptions,
 } from '@/lib/eventFormOptions';
 
+const WHATSAPP_ANNOUNCEMENTS_URL = 'https://chat.whatsapp.com/I0PxdtZt9x1Bg3QN9btF9M?s=cl&p=i&ilr=4&amv=0';
+
 const signupTypes: {
   type: PublicSubmissionType;
   title: string;
@@ -40,8 +44,8 @@ const signupTypes: {
   },
   {
     type: 'reminder',
-    title: 'Reminders',
-    description: 'Receive program and livestream updates.',
+    title: 'Announcements & Reminders',
+    description: 'Join the Pasban WhatsApp announcements group.',
     icon: Bell,
   },
   {
@@ -87,6 +91,8 @@ export default function ConnectScreen() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [notice, setNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reminderConsent, setReminderConsent] = useState(false);
+  const [reminderComplete, setReminderComplete] = useState(false);
   const dateOptions = useMemo(() => [{ label: 'Select date', value: '' }, ...buildDateOptions()], []);
   const timeOptions = useMemo(
     () => [{ label: 'Select time', value: '' }, ...buildTimeOptions().filter((option) => option.value)],
@@ -107,7 +113,12 @@ export default function ConnectScreen() {
     return (
       <Pressable
         key={item.type}
-        onPress={() => setSelectedType(item.type)}
+        onPress={() => {
+          setSelectedType(item.type);
+          setNotice('');
+          setReminderConsent(false);
+          setReminderComplete(false);
+        }}
         style={[
           styles.pathItem,
           isCompact && styles.compactPathItem,
@@ -130,7 +141,12 @@ export default function ConnectScreen() {
 
   useEffect(() => {
     const requestedType = signupTypes.find((item) => item.type === params.intent)?.type;
-    if (requestedType) setSelectedType(requestedType);
+    if (requestedType) {
+      setSelectedType(requestedType);
+      setNotice('');
+      setReminderConsent(false);
+      setReminderComplete(false);
+    }
   }, [params.intent]);
 
   const updateField = (field: keyof FormState, value: string) => {
@@ -159,6 +175,23 @@ export default function ConnectScreen() {
         setNotice(`Please complete: ${missingFields.join(', ')}.`);
         return;
       }
+    } else if (selectedType === 'reminder') {
+      const missingFields = [
+        ['Full name', form.name],
+        ['Phone number', form.phone],
+      ]
+        .filter(([, value]) => !String(value || '').trim())
+        .map(([field]) => field);
+
+      if (missingFields.length) {
+        setNotice(`Please complete: ${missingFields.join(', ')}.`);
+        return;
+      }
+
+      if (!reminderConsent) {
+        setNotice('Please confirm that you want to receive announcements through the WhatsApp group.');
+        return;
+      }
     } else if (!form.name.trim() && !form.email.trim() && !form.phone.trim()) {
       setNotice('Please include at least one contact field so we can follow up.');
       return;
@@ -185,14 +218,28 @@ export default function ConnectScreen() {
               ADDTOSCHD: form.requestsAnjuman === 'yes',
               reviewStatus: 'pending_review',
             }
+          : selectedType === 'reminder'
+            ? {
+                interestType: selectedType,
+                channel: 'whatsapp',
+                whatsappConsent: true,
+                consentedAt: new Date().toISOString(),
+                inviteRequested: true,
+              }
           : {
               interestType: selectedType,
             },
       });
 
-      setNotice(result.status === 'pending_review'
-        ? 'Event submitted for review. It will appear publicly after approval.'
-        : 'Submission received. Thank you.');
+      if (selectedType === 'reminder') {
+        setReminderComplete(true);
+        setReminderConsent(false);
+        setNotice('');
+      } else {
+        setNotice(result.status === 'pending_review'
+          ? 'Event submitted for review. It will appear publicly after approval.'
+          : 'Submission received. Thank you.');
+      }
       setForm(initialForm);
     } catch {
       setNotice('Unable to submit right now. Please try again.');
@@ -202,7 +249,7 @@ export default function ConnectScreen() {
   };
 
   return (
-    <AppShell title="Community" subtitle="Events, reminders, membership, volunteering, and contact">
+    <AppShell title="Community" subtitle="Events, announcements, membership, volunteering, and contact">
       <View style={styles.connectLayout}>
         <View style={[styles.pathMenu, compact && styles.compactPathMenu]}>
           <Text style={styles.pathEyebrow}>Choose a path</Text>
@@ -240,124 +287,225 @@ export default function ConnectScreen() {
           <Text style={styles.formIntro}>
             {selectedType === 'event'
               ? 'Submissions remain pending until the Pasban team confirms and publishes them.'
-              : 'Share your contact details and the Pasban team will follow up.'}
+              : selectedType === 'reminder'
+                ? 'Complete this short signup, then join the group to receive Pasban announcements on WhatsApp.'
+                : 'Share your contact details and the Pasban team will follow up.'}
           </Text>
-          {selectedType === 'event' ? (
+          {selectedType === 'event' || (selectedType === 'reminder' && !reminderComplete) ? (
             <Text style={styles.requiredNote}>
               <Text style={styles.requiredMark}>*</Text> Fields marked with an asterisk must be completed.
             </Text>
           ) : null}
 
-          <View style={styles.form}>
-            <View style={styles.fieldRow}>
-              <LabeledInput
-                layout="grid"
-                label="Full name"
-                required={selectedType === 'event'}
-                value={form.name}
-                onChangeText={(value) => updateField('name', value)}
-              />
-              <LabeledInput
-                layout="grid"
-                label="Email address"
-                required={selectedType === 'event'}
-                value={form.email}
-                keyboardType="email-address"
-                onChangeText={(value) => updateField('email', value)}
-              />
-            </View>
-            <LabeledInput
-              label="Phone number"
-              required={selectedType === 'event'}
-              value={form.phone}
-              keyboardType="phone-pad"
-              onChangeText={(value) => updateField('phone', value)}
+          {selectedType === 'reminder' && reminderComplete ? (
+            <ReminderSuccess
+              onReset={() => {
+                setNotice('');
+                setReminderConsent(false);
+                setReminderComplete(false);
+              }}
             />
-
-            {selectedType === 'event' ? (
-              <>
-                <LabeledInput
-                  label="Event title"
-                  required
-                  placeholder="Majlis-e-Aza"
-                  value={form.eventTitle}
-                  onChangeText={(value) => updateField('eventTitle', value)}
-                />
+          ) : (
+            <>
+              <View style={styles.form}>
                 <View style={styles.fieldRow}>
-                  <FormPicker
+                  <LabeledInput
                     layout="grid"
-                    label="Date"
-                    required
-                    tone="light"
-                    value={form.eventDate}
-                    options={dateOptions}
-                    onChange={(value) => updateField('eventDate', value)}
+                    label="Full name"
+                    required={selectedType === 'event' || selectedType === 'reminder'}
+                    value={form.name}
+                    onChangeText={(value) => updateField('name', value)}
                   />
-                  <FormPicker
+                  <LabeledInput
                     layout="grid"
-                    label="Time"
-                    required
-                    tone="light"
-                    value={form.eventTime}
-                    options={timeOptions}
-                    onChange={(value) => updateField('eventTime', value)}
+                    label="Email address"
+                    required={selectedType === 'event'}
+                    value={form.email}
+                    keyboardType="email-address"
+                    onChangeText={(value) => updateField('email', value)}
                   />
                 </View>
                 <LabeledInput
-                  label="Event address"
-                  required
-                  value={form.eventAddress}
-                  onChangeText={(value) => updateField('eventAddress', value)}
+                  label="Phone number"
+                  required={selectedType === 'event' || selectedType === 'reminder'}
+                  value={form.phone}
+                  keyboardType="phone-pad"
+                  onChangeText={(value) => updateField('phone', value)}
                 />
-                <View style={styles.fieldRow}>
-                  <FormPicker
-                    layout="grid"
-                    label="Event for"
-                    required
-                    tone="light"
-                    value={form.eventAudience}
-                    options={publicAudienceOptions}
-                    onChange={(value) => updateField('eventAudience', value)}
-                  />
-                  <FormPicker
-                    layout="grid"
-                    label="Anjuman participation"
-                    required
-                    tone="light"
-                    value={form.requestsAnjuman}
-                    options={publicAnjumanOptions}
-                    onChange={(value) => updateField('requestsAnjuman', value)}
-                  />
-                </View>
-                <Text style={styles.helperText}>
-                  Anjuman participation remains a request until the program director confirms availability.
-                </Text>
-              </>
-            ) : null}
 
-            <LabeledInput
-              label={selectedType === 'event' ? 'Additional notes' : 'Notes or interests'}
-              placeholder={selectedType === 'event' ? 'Contact person, speaker, flyer link, or other details' : ''}
-              value={form.message}
-              multiline
-              onChangeText={(value) => updateField('message', value)}
-            />
-          </View>
+                {selectedType === 'event' ? (
+                  <>
+                    <LabeledInput
+                      label="Event title"
+                      required
+                      placeholder="Majlis-e-Aza"
+                      value={form.eventTitle}
+                      onChangeText={(value) => updateField('eventTitle', value)}
+                    />
+                    <View style={styles.fieldRow}>
+                      <FormPicker
+                        layout="grid"
+                        label="Date"
+                        required
+                        tone="light"
+                        value={form.eventDate}
+                        options={dateOptions}
+                        onChange={(value) => updateField('eventDate', value)}
+                      />
+                      <FormPicker
+                        layout="grid"
+                        label="Time"
+                        required
+                        tone="light"
+                        value={form.eventTime}
+                        options={timeOptions}
+                        onChange={(value) => updateField('eventTime', value)}
+                      />
+                    </View>
+                    <LabeledInput
+                      label="Event address"
+                      required
+                      value={form.eventAddress}
+                      onChangeText={(value) => updateField('eventAddress', value)}
+                    />
+                    <View style={styles.fieldRow}>
+                      <FormPicker
+                        layout="grid"
+                        label="Event for"
+                        required
+                        tone="light"
+                        value={form.eventAudience}
+                        options={publicAudienceOptions}
+                        onChange={(value) => updateField('eventAudience', value)}
+                      />
+                      <FormPicker
+                        layout="grid"
+                        label="Anjuman participation"
+                        required
+                        tone="light"
+                        value={form.requestsAnjuman}
+                        options={publicAnjumanOptions}
+                        onChange={(value) => updateField('requestsAnjuman', value)}
+                      />
+                    </View>
+                    <Text style={styles.helperText}>
+                      Anjuman participation remains a request until the program director confirms availability.
+                    </Text>
+                  </>
+                ) : null}
 
-          <View style={styles.actionRow}>
-            <ActionButton disabled={isSubmitting} variant="dark" onPress={submit}>
-              {isSubmitting ? 'Submitting...' : selectedType === 'event' ? 'Submit for review' : 'Send'}
-            </ActionButton>
-            {selectedType !== 'contact' ? (
-              <Pressable onPress={() => setSelectedType('contact')} style={styles.contactLink}>
-                <Text style={styles.contactLinkText}>Contact the program director</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+                {selectedType === 'event' ? (
+                  <LabeledInput
+                    label="Additional notes"
+                    placeholder="Contact person, speaker, flyer link, or other details"
+                    value={form.message}
+                    multiline
+                    onChangeText={(value) => updateField('message', value)}
+                  />
+                ) : null}
+                {selectedType === 'membership' ? (
+                  <LabeledInput
+                    label="Membership details"
+                    value={form.message}
+                    multiline
+                    onChangeText={(value) => updateField('message', value)}
+                  />
+                ) : null}
+                {selectedType === 'volunteer' ? (
+                  <LabeledInput
+                    label="How would you like to help?"
+                    value={form.message}
+                    multiline
+                    onChangeText={(value) => updateField('message', value)}
+                  />
+                ) : null}
+                {selectedType === 'contact' ? (
+                  <LabeledInput
+                    label="Message"
+                    value={form.message}
+                    multiline
+                    onChangeText={(value) => updateField('message', value)}
+                  />
+                ) : null}
+
+                {selectedType === 'reminder' ? (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: reminderConsent }}
+                    onPress={() => setReminderConsent((current) => !current)}
+                    style={styles.consentRow}
+                  >
+                    <View style={[styles.consentBox, reminderConsent && styles.checkedConsentBox]}>
+                      {reminderConsent ? <Check color={colors.ivory} size={15} strokeWidth={2.5} /> : null}
+                    </View>
+                    <Text style={styles.consentText}>
+                      I want to receive Pasban-e-Aza announcements through the WhatsApp group and understand that group members may see my phone number.
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <View style={styles.actionRow}>
+                <ActionButton disabled={isSubmitting} variant="dark" onPress={submit}>
+                  {isSubmitting
+                    ? 'Submitting...'
+                    : selectedType === 'event'
+                      ? 'Submit for review'
+                      : selectedType === 'reminder'
+                        ? 'Continue to WhatsApp'
+                        : 'Send'}
+                </ActionButton>
+                {selectedType !== 'contact' ? (
+                  <Pressable
+                    onPress={() => {
+                      setSelectedType('contact');
+                      setNotice('');
+                      setReminderConsent(false);
+                      setReminderComplete(false);
+                    }}
+                    style={styles.contactLink}
+                  >
+                    <Text style={styles.contactLinkText}>Contact the program director</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            </>
+          )}
         </View>
       </View>
     </AppShell>
+  );
+}
+
+function ReminderSuccess({ onReset }: { onReset: () => void }) {
+  return (
+    <View style={styles.reminderSuccess}>
+      <View style={styles.successLabelRow}>
+        <View style={styles.successIcon}>
+          <Check color={colors.ivory} size={15} strokeWidth={2.5} />
+        </View>
+        <Text style={styles.successLabel}>Signup saved</Text>
+      </View>
+      <Text style={styles.successTitle}>Join the announcements group</Text>
+      <Text style={styles.successText}>
+        Your details and consent have been saved. WhatsApp will ask you to confirm before joining the group.
+      </Text>
+      <Pressable
+        accessibilityHint="Opens the Pasban announcements group in WhatsApp"
+        accessibilityLabel="Join Pasban WhatsApp announcements"
+        accessibilityRole="link"
+        onPress={() => Linking.openURL(WHATSAPP_ANNOUNCEMENTS_URL)}
+        style={({ pressed }) => [styles.whatsappButton, pressed && styles.pressedButton]}
+      >
+        <MessageCircle color={colors.ivory} size={20} strokeWidth={2} />
+        <Text style={styles.whatsappButtonText}>Join WhatsApp Announcements</Text>
+        <ArrowUpRight color={colors.ivory} size={18} strokeWidth={2} />
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={onReset} style={styles.resetSignup}>
+        <Text style={styles.resetSignupText}>Use different details</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -585,6 +733,103 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typography.small,
     lineHeight: 19,
+  },
+  consentRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingVertical: spacing.xs,
+  },
+  consentBox: {
+    alignItems: 'center',
+    borderColor: colors.onIvoryLine,
+    borderRadius: radii.xs,
+    borderWidth: 1,
+    height: 22,
+    justifyContent: 'center',
+    marginTop: 1,
+    width: 22,
+  },
+  checkedConsentBox: {
+    backgroundColor: colors.oxblood,
+    borderColor: colors.oxblood,
+  },
+  consentText: {
+    color: colors.onIvoryMuted,
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
+    lineHeight: 20,
+    maxWidth: 580,
+  },
+  reminderSuccess: {
+    alignItems: 'flex-start',
+    marginTop: spacing.xl,
+    maxWidth: 620,
+  },
+  successLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  successIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.green,
+    borderRadius: radii.xs,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  successLabel: {
+    color: colors.green,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  successTitle: {
+    color: colors.onIvory,
+    fontFamily: fonts.displayMedium,
+    fontSize: 30,
+    lineHeight: 35,
+    marginTop: spacing.md,
+  },
+  successText: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginTop: spacing.sm,
+  },
+  whatsappButton: {
+    alignItems: 'center',
+    backgroundColor: colors.green,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pressedButton: {
+    opacity: 0.84,
+  },
+  whatsappButtonText: {
+    color: colors.ivory,
+    flexShrink: 1,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.body,
+  },
+  resetSignup: {
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    minHeight: 40,
+  },
+  resetSignupText: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   actionRow: {
     alignItems: 'center',
