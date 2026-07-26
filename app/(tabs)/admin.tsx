@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'expo-router';
-import { Pencil } from 'lucide-react-native';
+import { Pencil, RefreshCw } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
@@ -15,11 +15,14 @@ import {
   fetchAdminEvents,
   fetchAdminEventSubmissions,
   fetchIslamicCalendarYears,
+  fetchProductionSyncState,
   fetchTodayMajlis,
   updateEventSubmissionStatus,
   updateIslamicMonthLength,
   updateMajlisStatus,
+  triggerProductionSync,
 } from '@/lib/api';
+import type { ProductionSyncState } from '@/lib/api';
 import { getHoustonDate, IslamicCalendarYear } from '@/lib/calendarUtils';
 import {
   eventAudienceOptions,
@@ -48,6 +51,8 @@ export default function AdminScreen() {
   const [adminEvents, setAdminEvents] = useState<CommunityEvent[]>([]);
   const [eventsNotice, setEventsNotice] = useState('');
   const [eventsBusy, setEventsBusy] = useState(false);
+  const [syncState, setSyncState] = useState<ProductionSyncState>({ status: 'unknown' });
+  const [syncBusy, setSyncBusy] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthState((user) => {
@@ -67,6 +72,7 @@ export default function AdminScreen() {
       setSelectedYear((current) => current || sorted.find((year) => year.firstDate <= getHoustonDate())?.year || sorted[0]?.year || null);
     });
     refreshEvents();
+    fetchProductionSyncState().then(setSyncState);
   }, [authUser?.isAdmin]);
 
   const activeCalendarYear = useMemo(
@@ -160,6 +166,23 @@ export default function AdminScreen() {
     }
   };
 
+  const refreshProductionMirror = async () => {
+    setSyncBusy(true);
+    try {
+      const state = await triggerProductionSync();
+      setSyncState(state);
+      setTimeout(() => fetchProductionSyncState().then(setSyncState), 1500);
+    } catch {
+      setSyncState((current) => ({
+        ...current,
+        status: 'error',
+        lastError: 'Unable to start synchronization. Check Netlify function logs.',
+      }));
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
   return (
     <AppShell title="Admin" subtitle="Review submissions, maintain event data, update status, and adjust the Islamic calendar">
       <View style={styles.stack}>
@@ -192,6 +215,35 @@ export default function AdminScreen() {
                 </View>
                 <Pressable onPress={logout} style={styles.logoutButton}>
                   <Text style={styles.logoutButtonText}>Logout</Text>
+                </Pressable>
+              </View>
+            </Card>
+
+            <Card>
+              <View style={styles.panelHeader}>
+                <View style={styles.panelCopy}>
+                  <Text style={styles.sectionTitle}>Production Mirror</Text>
+                  <Text style={styles.sectionMeta}>
+                    {syncState.status === 'current'
+                      ? `Current${syncState.lastSuccessAt ? ` / last synced ${formatSyncTime(syncState.lastSuccessAt)}` : ''}`
+                      : syncState.status === 'error'
+                        ? `Sync error${syncState.lastError ? ` / ${syncState.lastError}` : ''}`
+                        : 'Waiting for the first production synchronization'}
+                  </Text>
+                  {syncState.counts?.events !== undefined ? (
+                    <Text style={styles.meta}>
+                      {syncState.counts.events} events / {syncState.counts.announcements || 0} announcements / {syncState.counts.islamicEvents || 0} Islamic events
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  accessibilityLabel="Synchronize production data now"
+                  disabled={syncBusy}
+                  onPress={refreshProductionMirror}
+                  style={styles.secondaryButton}
+                >
+                  <RefreshCw color={colors.ink} size={17} />
+                  <Text style={styles.secondaryButtonText}>{syncBusy ? 'Syncing...' : 'Sync now'}</Text>
                 </Pressable>
               </View>
             </Card>
@@ -366,6 +418,18 @@ export default function AdminScreen() {
       </View>
     </AppShell>
   );
+}
+
+function formatSyncTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('en-US', {
+    timeZone: 'America/Chicago',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function SubmissionCard({
@@ -591,6 +655,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.sm,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
     minHeight: 40,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,

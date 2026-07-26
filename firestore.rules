@@ -33,6 +33,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /prodMirrorEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /betaEventOverrides/{eventId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     match /eventDays/{date} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -63,6 +72,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /centers/{centerId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /specialEvents/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /islamicCalendar/{year} {
       allow read: if true;
 
@@ -76,6 +95,15 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    match /prodMirrorIslamicCalendar/{year} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /betaIslamicCalendarOverrides/{year} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     match /islamicEvents/{eventId} {
       allow read: if true;
       allow write: if false;
@@ -83,6 +111,21 @@ service cloud.firestore {
 
     match /settings/{settingId} {
       allow read: if true;
+      allow write: if false;
+    }
+
+    match /prodSyncState/{documentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /prodSyncManifests/{documentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /prodSyncConflicts/{documentId} {
+      allow read: if isAdmin();
       allow write: if false;
     }
 

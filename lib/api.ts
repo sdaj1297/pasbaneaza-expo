@@ -29,15 +29,20 @@ import {
   fetchHomeFromFirebase,
   fetchIslamicCalendarYearsFromFirebase,
   fetchPrayerTimesFromFirebase,
+  fetchProductionSyncStateFromFirebase,
   fetchTodayMajlisFromFirebase,
   isFirebaseBackendEnabled,
   createEventFromSubmissionInFirebase,
+  deleteAdminEventInFirebase,
   submitPublicFormToFirebase,
   updateAdminEventInFirebase,
   updateEventSubmissionStatusInFirebase,
   updateIslamicMonthLengthInFirebase,
   updateMajlisStatusInFirebase,
+  triggerProductionSyncFromFirebase,
 } from '@/lib/firebaseData';
+import type { ProductionSyncState } from '@/lib/firebaseData';
+export type { ProductionSyncState } from '@/lib/firebaseData';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -277,6 +282,16 @@ export async function fetchAdminEvents(): Promise<CommunityEvent[]> {
   return result.events;
 }
 
+export async function fetchProductionSyncState(): Promise<ProductionSyncState> {
+  if (isFirebaseBackendEnabled()) return fetchProductionSyncStateFromFirebase();
+  return { status: 'unknown' };
+}
+
+export async function triggerProductionSync(): Promise<ProductionSyncState> {
+  if (isFirebaseBackendEnabled()) return triggerProductionSyncFromFirebase();
+  return { status: 'unknown' };
+}
+
 export async function fetchAdminEvent(eventId: string): Promise<CommunityEvent | null> {
   if (isFirebaseBackendEnabled()) return fetchAdminEventFromFirebase(eventId);
 
@@ -321,6 +336,12 @@ export async function updateAdminEvent(
     'PATCH',
   );
   return result.event;
+}
+
+export async function deleteAdminEvent(eventId: string, eventDate: string): Promise<void> {
+  if (isFirebaseBackendEnabled()) return deleteAdminEventInFirebase(eventId, eventDate);
+
+  await sendJson(`/admin/events/${eventId}`, { eventDate }, {}, 'DELETE');
 }
 
 function matchesFilter(event: CommunityEvent, filter: CalendarFilter) {
