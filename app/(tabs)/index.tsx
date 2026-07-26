@@ -23,21 +23,25 @@ import {
 import { AppShell } from '@/components/AppShell';
 import { HomeScheduleBoard, HomeScheduleFilter } from '@/components/HomeScheduleBoard';
 import { LiveStream } from '@/components/LiveStream';
+import { HomeLoadingSkeleton } from '@/components/LoadingSkeleton';
 import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
 import {
   CommunityEvent,
-  events as fallbackEvents,
-  islamicTodayLabel,
-  prayerTimes as fallbackPrayerTimes,
   PrayerTime,
   socialLinks,
-  specialEvent as fallbackSpecialEvent,
   SpecialEvent,
   StatusItem,
-  todayLabel,
 } from '@/data/mock';
 import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
-import { fetchEvents, fetchHome, fetchTodayMajlis } from '@/lib/api';
+import {
+  fetchEvents,
+  fetchHome,
+  peekEvents,
+  peekHome,
+  peekTodayMajlis,
+  preloadPrimaryData,
+  subscribeTodayMajlis,
+} from '@/lib/api';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 import { formatGregorianDate, getRelativeDateLabel } from '@/lib/datePresentation';
 import {
@@ -58,37 +62,48 @@ export default function HomeScreen() {
   const width = useResponsiveWidth();
   const compact = width < 820;
   const [audience, setAudience] = useState<HomeScheduleFilter>('anjuman');
-  const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(fallbackEvents);
-  const [allEvents, setAllEvents] = useState<CommunityEvent[]>(fallbackEvents);
-  const [times, setTimes] = useState<PrayerTime[]>(fallbackPrayerTimes);
-  const [currentDate, setCurrentDate] = useState(fallbackEvents[0]?.date || '');
-  const [currentLabel, setCurrentLabel] = useState(todayLabel);
-  const [currentIslamicLabel, setCurrentIslamicLabel] = useState(islamicTodayLabel);
-  const [featured, setFeatured] = useState<SpecialEvent>(fallbackSpecialEvent);
-  const [liveStatuses, setLiveStatuses] = useState<StatusItem[]>([]);
+  const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(
+    () => peekHome()?.upcomingEvents ?? [],
+  );
+  const [allEvents, setAllEvents] = useState<CommunityEvent[]>(
+    () => peekEvents('all') ?? [],
+  );
+  const [times, setTimes] = useState<PrayerTime[]>(() => peekHome()?.prayerTimes ?? []);
+  const [currentDate, setCurrentDate] = useState(() => peekHome()?.date ?? '');
+  const [currentLabel, setCurrentLabel] = useState(() => peekHome()?.label ?? '');
+  const [currentIslamicLabel, setCurrentIslamicLabel] = useState(
+    () => peekHome()?.islamicDate?.label ?? '',
+  );
+  const [featured, setFeatured] = useState<SpecialEvent | null>(
+    () => peekHome()?.specialEvent ?? null,
+  );
+  const [liveStatuses, setLiveStatuses] = useState<StatusItem[]>(
+    () => peekTodayMajlis() ?? [],
+  );
+  const [dataReady, setDataReady] = useState(
+    () => Boolean(peekHome() && peekEvents('all')),
+  );
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [clock, setClock] = useState(() => new Date());
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([fetchHome(), fetchEvents('all'), fetchTodayMajlis()]).then(([home, events, statuses]) => {
+    Promise.all([fetchHome(), fetchEvents('all')]).then(([home, events]) => {
       if (!active) return;
       setHomeEvents(home.upcomingEvents);
       setAllEvents(events);
-      setLiveStatuses(statuses);
       setTimes(home.prayerTimes);
-      setCurrentDate(home.date || fallbackEvents[0]?.date || '');
-      setCurrentLabel(home.label || todayLabel);
-      setCurrentIslamicLabel(home.islamicDate?.label || islamicTodayLabel);
+      setCurrentDate(home.date || '');
+      setCurrentLabel(home.label || '');
+      setCurrentIslamicLabel(home.islamicDate?.label || '');
       setFeatured(home.specialEvent);
+      setDataReady(true);
+      void preloadPrimaryData();
     });
 
     const refreshTimer = setInterval(() => {
       setClock(new Date());
-      fetchTodayMajlis().then((statuses) => {
-        if (active) setLiveStatuses(statuses);
-      });
     }, 30_000);
 
     return () => {
@@ -97,6 +112,7 @@ export default function HomeScreen() {
     };
   }, []);
 
+  useEffect(() => subscribeTodayMajlis(setLiveStatuses), []);
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   const mergedEvents = useMemo(() => dedupeEvents([...homeEvents, ...allEvents]), [allEvents, homeEvents]);
@@ -126,10 +142,21 @@ export default function HomeScreen() {
       : nextDateRelation === 'Tomorrow'
         ? "Tomorrow's committed majlis"
         : 'Next committed majlis';
-  const hasRealFlyer = Boolean(featured.isActive && featured.flyerUrl);
+  const hasRealFlyer = Boolean(featured?.isActive && featured.flyerUrl);
   const hasLiveStream = Boolean(
-    featured.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
+    featured?.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
   );
+
+  if (!dataReady || !featured) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Anjuman Pasban-e-Aza · Houston' }} />
+        <AppShell title="Anjuman Pasban-e-Aza">
+          <HomeLoadingSkeleton />
+        </AppShell>
+      </>
+    );
+  }
 
   return (
     <>

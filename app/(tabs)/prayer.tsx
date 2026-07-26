@@ -3,20 +3,31 @@ import { Moon, Sun, Sunrise, Sunset } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
+import { PrayerLoadingSkeleton } from '@/components/LoadingSkeleton';
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
-import { prayerTimes as fallbackPrayerTimes, PrayerTime, todayLabel } from '@/data/mock';
-import { fetchPrayerTimes } from '@/lib/api';
+import { PrayerTime } from '@/data/mock';
+import { fetchPrayerTimes, peekPrayerTimes } from '@/lib/api';
+import { getHoustonDate } from '@/lib/calendarUtils';
+import { formatGregorianDate } from '@/lib/datePresentation';
 
 export default function PrayerScreen() {
-  const [times, setTimes] = useState<PrayerTime[]>(fallbackPrayerTimes);
-  const nextPrayer = useMemo(() => findNextPrayer(times), [times]);
+  const [times, setTimes] = useState<PrayerTime[] | null>(() => peekPrayerTimes() ?? null);
+  const nextPrayer = useMemo(() => findNextPrayer(times || []), [times]);
 
   useEffect(() => {
     fetchPrayerTimes().then(setTimes);
   }, []);
 
+  if (times === null) {
+    return (
+      <AppShell title="Prayer Times" subtitle="Houston" compact>
+        <PrayerLoadingSkeleton />
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell title="Prayer Times" subtitle={`Houston · ${todayLabel}`} compact>
+    <AppShell title="Prayer Times" subtitle={`Houston · ${formatGregorianDate(getHoustonDate(), 'long')}`} compact>
       {nextPrayer ? (
         <View style={styles.nextPrayer}>
           <View>

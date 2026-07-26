@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Trash2 } from 'lucide-react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AdminEventDraft, AdminEventForm } from '@/components/AdminEventForm';
 import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
 import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
 import { CommunityEvent } from '@/data/mock';
-import { fetchAdminEvent, updateAdminEvent } from '@/lib/api';
+import { deleteAdminEvent, fetchAdminEvent, updateAdminEvent } from '@/lib/api';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 import { audienceToEventType } from '@/lib/eventFormOptions';
 
 export default function EventEditorScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ eventId?: string | string[] }>();
   const requestedEventId = Array.isArray(params.eventId) ? params.eventId[0] : params.eventId;
   const [eventId, setEventId] = useState<string | undefined>();
@@ -81,6 +82,44 @@ export default function EventEditorScreen() {
     }
   };
 
+  const performDelete = async () => {
+    if (!event) return;
+
+    setSaving(true);
+    setNotice('');
+    try {
+      await deleteAdminEvent(event.id, event.date);
+      router.replace('/events');
+    } catch {
+      setNotice('Unable to delete this event. Please try again.');
+      setSaving(false);
+    }
+  };
+
+  const deleteEvent = () => {
+    if (!event || saving) return;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Delete this event from the beta schedule? Production MySQL will not be changed.')) {
+        void performDelete();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Delete this beta event?',
+      'This removes the event from the beta schedule only. Production MySQL will not be changed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => void performDelete(),
+        },
+      ],
+    );
+  };
+
   return (
     <AppShell
       title="Edit event"
@@ -129,7 +168,24 @@ export default function EventEditorScreen() {
       ) : null}
 
       {authUser?.isAdmin && event ? (
-        <AdminEventForm disabled={saving} event={event} onSave={saveEvent} />
+        <>
+          <AdminEventForm disabled={saving} event={event} onSave={saveEvent} />
+          <View style={styles.dangerZone}>
+            <View style={styles.dangerCopy}>
+              <Text style={styles.dangerTitle}>Remove from beta schedule</Text>
+              <Text style={styles.meta}>Production remains unchanged. A newer production edit will restore the event for review.</Text>
+            </View>
+            <Pressable
+              accessibilityLabel="Delete event from beta schedule"
+              disabled={saving}
+              onPress={deleteEvent}
+              style={[styles.deleteButton, saving && styles.disabledButton]}
+            >
+              <Trash2 color={colors.ink} size={17} />
+              <Text style={styles.deleteButtonText}>Delete event</Text>
+            </Pressable>
+          </View>
+        </>
       ) : null}
     </AppShell>
   );
@@ -200,5 +256,44 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
+  },
+  dangerZone: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+  },
+  dangerCopy: {
+    flex: 1,
+    minWidth: 240,
+  },
+  dangerTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.body,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    backgroundColor: colors.redDark,
+    borderColor: colors.red,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  deleteButtonText: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

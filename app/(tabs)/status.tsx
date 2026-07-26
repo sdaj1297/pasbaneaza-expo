@@ -10,34 +10,47 @@ import {
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
+import { StatusLoadingSkeleton } from '@/components/LoadingSkeleton';
 import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
 import {
-  islamicTodayLabel,
   MajlisStatus,
-  statusItems as fallbackStatusItems,
   StatusItem,
 } from '@/data/mock';
-import { fetchTodayMajlis, updateMajlisStatus } from '@/lib/api';
+import {
+  fetchTodayMajlis,
+  peekTodayMajlis,
+  subscribeTodayMajlis,
+  updateMajlisStatus,
+} from '@/lib/api';
 import { getHoustonDate } from '@/lib/calendarUtils';
 import { majlisStages, majlisStatuses, stageForStatus } from '@/lib/majlisStatus';
 
 export default function StatusScreen() {
-  const [items, setItems] = useState<StatusItem[]>(fallbackStatusItems);
+  const [items, setItems] = useState<StatusItem[] | null>(() => peekTodayMajlis() ?? null);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [updateError, setUpdateError] = useState('');
+  useEffect(() => subscribeTodayMajlis(
+    setItems,
+    () => setUpdateError('Live updates are temporarily unavailable.'),
+  ), []);
+
+  if (items === null) {
+    return (
+      <AppShell title="Live Majlis Status" subtitle="Today in Houston" compact>
+        <StatusLoadingSkeleton />
+      </AppShell>
+    );
+  }
+
   const completed = items.filter((item) => item.status === 'Completed').length;
   const current = items.find((item) => item.status === 'Started' || item.status === 'En Route');
   const next = items.find((item) => item.status === 'Pending' || item.status === 'Delayed');
   const percent = items.length ? Math.round((completed / items.length) * 100) : 0;
   const statusDate = items[0]?.date || getHoustonDate();
   const statusDateLabel = formatStatusDate(statusDate);
-  const statusIslamicDateLabel = items[0]?.islamicDate || islamicTodayLabel;
+  const statusIslamicDateLabel = items[0]?.islamicDate || '';
   const routeCountLabel = items.length === 1 ? '1 scheduled stop' : `${items.length} scheduled stops`;
-
-  useEffect(() => {
-    fetchTodayMajlis().then(setItems);
-  }, []);
 
   const saveUpdate = async (
     item: StatusItem,
@@ -61,7 +74,11 @@ export default function StatusScreen() {
   };
 
   return (
-    <AppShell title="Live Majlis Status" subtitle={`${statusDateLabel} · ${statusIslamicDateLabel}`} compact>
+    <AppShell
+      title="Live Majlis Status"
+      subtitle={[statusDateLabel, statusIslamicDateLabel].filter(Boolean).join(' · ')}
+      compact
+    >
       <View style={styles.liveSummary}>
         <View style={styles.liveHeading}>
           <View style={styles.liveLabelRow}>

@@ -5,9 +5,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
 import { EventCard } from '@/components/EventCard';
+import { ScheduleLoadingSkeleton } from '@/components/LoadingSkeleton';
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
-import { CommunityEvent, events as fallbackEvents } from '@/data/mock';
-import { fetchEvents } from '@/lib/api';
+import { CommunityEvent } from '@/data/mock';
+import { fetchEvents, peekEvents } from '@/lib/api';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 const filters = ['All', 'Anjuman', 'Brothers', 'Sisters', 'Family'] as const;
@@ -15,13 +16,16 @@ type Filter = (typeof filters)[number];
 
 export default function EventsScreen() {
   const [filter, setFilter] = useState<Filter>('All');
-  const [filtered, setFiltered] = useState<CommunityEvent[]>(fallbackEvents);
+  const [filtered, setFiltered] = useState<CommunityEvent[] | null>(
+    () => peekEvents('all') ?? null,
+  );
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   useEffect(() => {
     let active = true;
+    setFiltered(peekEvents(filter.toLowerCase()) ?? null);
     fetchEvents(filter.toLowerCase()).then((nextEvents) => {
       if (active) setFiltered(nextEvents);
     });
@@ -32,6 +36,10 @@ export default function EventsScreen() {
 
   return (
     <AppShell title="Schedule" subtitle="Committed Anjuman programs and approved community majalis">
+      {filtered === null ? (
+        <ScheduleLoadingSkeleton />
+      ) : (
+        <>
       <View style={styles.scheduleHeader}>
         <View style={styles.headerCopy}>
           <Text style={styles.headerEyebrow}>Houston community calendar</Text>
@@ -79,6 +87,8 @@ export default function EventsScreen() {
           </View>
         ) : null}
       </View>
+        </>
+      )}
     </AppShell>
   );
 }
