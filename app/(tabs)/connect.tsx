@@ -16,6 +16,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fro
 
 import { ActionButton } from '@/components/ActionButton';
 import { AppShell } from '@/components/AppShell';
+import { FormDatePicker } from '@/components/FormDatePicker';
 import { FormPicker } from '@/components/FormPicker';
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
 import { socialLinks } from '@/data/mock';
@@ -23,7 +24,6 @@ import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import { PublicSubmissionType, submitPublicForm } from '@/lib/api';
 import {
   anjumanRequestOptions,
-  buildDateOptions,
   buildTimeOptions,
   eventAudienceOptions,
 } from '@/lib/eventFormOptions';
@@ -93,7 +93,6 @@ export default function ConnectScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reminderConsent, setReminderConsent] = useState(false);
   const [reminderComplete, setReminderComplete] = useState(false);
-  const dateOptions = useMemo(() => [{ label: 'Select date', value: '' }, ...buildDateOptions()], []);
   const timeOptions = useMemo(
     () => [{ label: 'Select time', value: '' }, ...buildTimeOptions().filter((option) => option.value)],
     [],
@@ -343,13 +342,11 @@ export default function ConnectScreen() {
                       onChangeText={(value) => updateField('eventTitle', value)}
                     />
                     <View style={styles.fieldRow}>
-                      <FormPicker
+                      <FormDatePicker
                         layout="grid"
                         label="Date"
                         required
-                        tone="light"
                         value={form.eventDate}
-                        options={dateOptions}
                         onChange={(value) => updateField('eventDate', value)}
                       />
                       <FormPicker

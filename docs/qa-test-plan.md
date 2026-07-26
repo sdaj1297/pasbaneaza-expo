@@ -276,6 +276,8 @@ Pass:
 - Fields follow a consistent vertical rhythm without large empty blocks between controls.
 - Paired fields form equal columns on desktop and stack cleanly on mobile.
 - Opening a date, time, audience, or admin picker does not stretch neighboring fields.
+- Add Event uses a calendar date selector rather than a long date dropdown.
+- Past dates cannot be selected, month navigation works, and the chosen date is shown back in the form.
 - Announcements signup requires a full name, phone number, and explicit WhatsApp consent.
 - Announcements signup does not show a generic notes or interests field.
 - A successful announcements signup shows a button to join the Pasban WhatsApp group.
