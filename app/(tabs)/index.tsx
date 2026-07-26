@@ -31,7 +31,7 @@ import {
   SpecialEvent,
   StatusItem,
 } from '@/data/mock';
-import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
+import { useResponsiveHeight, useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import {
   fetchEvents,
   fetchHome,
@@ -59,6 +59,7 @@ const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eve
 
 export default function HomeScreen() {
   const width = useResponsiveWidth();
+  const height = useResponsiveHeight();
   const compact = width < 820;
   const [audience, setAudience] = useState<HomeScheduleFilter>('anjuman');
   const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(
@@ -161,7 +162,9 @@ export default function HomeScreen() {
     <>
       <Stack.Screen options={{ title: 'Anjuman Pasban-e-Aza · Houston' }} />
       <AppShell title="Anjuman Pasban-e-Aza">
-        {hasRealFlyer ? <FeaturedFlyer event={featured} viewportWidth={width} /> : null}
+        {hasRealFlyer ? (
+          <FeaturedFlyer event={featured} viewportHeight={height} viewportWidth={width} />
+        ) : null}
 
         <View style={[styles.todayHero, compact && styles.compactHero]}>
           <View style={[styles.dateBlock, compact && styles.compactDateBlock]}>
@@ -440,14 +443,17 @@ function PrayerPreview({ times }: { times: PrayerTime[] }) {
 
 function FeaturedFlyer({
   event,
+  viewportHeight,
   viewportWidth,
 }: {
   event: SpecialEvent;
+  viewportHeight: number;
   viewportWidth: number;
 }) {
   const compact = viewportWidth < 700;
   const mobileWidth = Math.max(viewportWidth - 42, 0);
-  const posterHeight = compact ? Math.min((mobileWidth * 16) / 9, 760) : 820;
+  const desktopHeight = Math.min(820, Math.max(viewportHeight - 104, 520));
+  const posterHeight = compact ? Math.min((mobileWidth * 16) / 9, 760) : desktopHeight;
 
   return (
     <View
