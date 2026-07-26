@@ -22,6 +22,10 @@ function getBrowserWidth() {
   return getBrowserGlobal().innerWidth || 0;
 }
 
+function getBrowserHeight() {
+  return getBrowserGlobal().innerHeight || 0;
+}
+
 function getServerWidth() {
   return 0;
 }
@@ -35,4 +39,15 @@ export function useResponsiveWidth() {
   );
 
   return Platform.OS === 'web' ? webWidth : nativeWidth;
+}
+
+export function useResponsiveHeight() {
+  const { height: nativeHeight } = useWindowDimensions();
+  const webHeight = useSyncExternalStore(
+    subscribeToBrowserWidth,
+    getBrowserHeight,
+    getServerWidth,
+  );
+
+  return Platform.OS === 'web' ? webHeight : nativeHeight;
 }
