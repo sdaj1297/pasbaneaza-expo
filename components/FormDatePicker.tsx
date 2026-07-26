@@ -4,7 +4,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
-import { addDays, getHoustonDate } from '@/lib/calendarUtils';
+import { getHoustonDate } from '@/lib/calendarUtils';
 
 type FormDatePickerProps = {
   label: string;
@@ -26,7 +26,7 @@ export function FormDatePicker({
   maxDate,
 }: FormDatePickerProps) {
   const earliestDate = minDate || getHoustonDate();
-  const latestDate = maxDate || addDays(earliestDate, 179);
+  const latestDate = maxDate || addYears(earliestDate, 3);
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(value || earliestDate);
   const selectedDates = useMemo(
@@ -173,6 +173,14 @@ function formatDate(value: string) {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+function addYears(value: string, years: number) {
+  const [year, month, day] = value.split('-').map(Number);
+  const targetYear = year + years;
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, month, 0, 12)).getUTCDate();
+  const targetDay = Math.min(day, lastDayOfTargetMonth);
+  return `${targetYear}-${String(month).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({
