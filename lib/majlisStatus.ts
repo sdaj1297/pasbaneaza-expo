@@ -14,6 +14,7 @@ export const majlisStages = [
   'Salaam',
   'Marsiya',
   'Speech',
+  'Masaib',
   'Maatam',
 ] as const;
 

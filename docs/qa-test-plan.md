@@ -197,6 +197,7 @@ Pass:
 - Only today's Anjuman schedule appears.
 - Status data remains after refresh.
 - Public controls remain available without signing in.
+- Stage controls list Speech, Masaib, and Maatam in that order.
 - Status and stage changes appear after refresh and on another device.
 - The current majlis/status area is understandable at a glance.
 
