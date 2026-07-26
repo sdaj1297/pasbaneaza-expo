@@ -161,7 +161,7 @@ export default function HomeScreen() {
     <>
       <Stack.Screen options={{ title: 'Anjuman Pasban-e-Aza · Houston' }} />
       <AppShell title="Anjuman Pasban-e-Aza">
-        {hasRealFlyer ? <FeaturedFlyer compact={width < 700} event={featured} /> : null}
+        {hasRealFlyer ? <FeaturedFlyer event={featured} viewportWidth={width} /> : null}
 
         <View style={[styles.todayHero, compact && styles.compactHero]}>
           <View style={[styles.dateBlock, compact && styles.compactDateBlock]}>
@@ -438,7 +438,17 @@ function PrayerPreview({ times }: { times: PrayerTime[] }) {
   );
 }
 
-function FeaturedFlyer({ compact, event }: { compact: boolean; event: SpecialEvent }) {
+function FeaturedFlyer({
+  event,
+  viewportWidth,
+}: {
+  event: SpecialEvent;
+  viewportWidth: number;
+}) {
+  const compact = viewportWidth < 700;
+  const mobileWidth = Math.max(viewportWidth - 42, 0);
+  const posterHeight = compact ? Math.min((mobileWidth * 16) / 9, 760) : 820;
+
   return (
     <View
       accessibilityLabel={`${event.title}. ${event.dateLabel}. ${event.description}`}
@@ -447,7 +457,7 @@ function FeaturedFlyer({ compact, event }: { compact: boolean; event: SpecialEve
       <Image
         resizeMode="contain"
         source={{ uri: event.flyerUrl }}
-        style={compact ? styles.compactFlyerPoster : styles.flyerPoster}
+        style={[styles.flyerPoster, { height: posterHeight }]}
       />
     </View>
   );
@@ -891,12 +901,7 @@ const styles = StyleSheet.create({
   },
   flyerPoster: {
     aspectRatio: 9 / 16,
-    height: 820,
     maxWidth: '100%',
-  },
-  compactFlyerPoster: {
-    height: undefined,
-    width: '100%',
   },
   featuredNotice: {
     backgroundColor: colors.oxblood,
