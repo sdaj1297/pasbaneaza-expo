@@ -447,7 +447,7 @@ function FeaturedFlyer({ compact, event }: { compact: boolean; event: SpecialEve
       <Image
         resizeMode="contain"
         source={{ uri: event.flyerUrl }}
-        style={[styles.flyerPoster, compact && styles.compactFlyerPoster]}
+        style={compact ? styles.compactFlyerPoster : styles.flyerPoster}
       />
     </View>
   );
