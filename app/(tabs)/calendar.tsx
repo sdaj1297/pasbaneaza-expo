@@ -16,13 +16,13 @@ import {
 } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
+import { CalendarLoadingSkeleton } from '@/components/LoadingSkeleton';
 import { colors, fonts, radii, shadows, spacing, typography } from '@/constants/theme';
-import { CommunityEvent, events as fallbackEvents, islamicCalendarYears, islamicEvents } from '@/data/mock';
+import { CommunityEvent } from '@/data/mock';
 import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
-import { fetchCalendarMonth } from '@/lib/api';
+import { fetchCalendarMonth, peekCalendarMonth } from '@/lib/api';
 import {
   addMonths,
-  buildCalendarMonth,
   CalendarDay,
   CalendarFilter,
   CalendarMonthPayload,
@@ -42,25 +42,20 @@ const filterOptions: { label: string; value: CalendarFilter }[] = [
   { label: 'Family', value: 'family' },
 ];
 
-const fallbackCalendar = buildCalendarMonth({
-  date: getHoustonDate(),
-  filter: 'all',
-  events: fallbackEvents,
-  calendarYears: islamicCalendarYears,
-  islamicEvents,
-});
-
 export default function CalendarScreen() {
   const width = useResponsiveWidth();
   const compact = width < 760;
   const [selectedDate, setSelectedDate] = useState(getHoustonDate());
   const [activeDayDate, setActiveDayDate] = useState(getHoustonDate());
   const [filter, setFilter] = useState<CalendarFilter>('all');
-  const [calendar, setCalendar] = useState<CalendarMonthPayload>(fallbackCalendar);
+  const [calendar, setCalendar] = useState<CalendarMonthPayload | null>(
+    () => peekCalendarMonth(getHoustonDate(), 'all') ?? null,
+  );
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let active = true;
+    setCalendar(peekCalendarMonth(selectedDate, filter) ?? null);
     fetchCalendarMonth(selectedDate, filter)
       .then((payload) => {
         if (!active) return;
@@ -73,14 +68,7 @@ export default function CalendarScreen() {
       })
       .catch(() => {
         if (!active) return;
-        const payload = buildCalendarMonth({
-          date: selectedDate,
-          filter,
-          events: fallbackEvents,
-          calendarYears: islamicCalendarYears,
-          islamicEvents,
-        });
-        setCalendar(payload);
+        setNotice('The calendar could not be refreshed. Please try again.');
       });
 
     return () => {
@@ -89,9 +77,16 @@ export default function CalendarScreen() {
   }, [filter, selectedDate]);
 
   const visibleEvents = useMemo(
-    () => dedupeEvents(calendar.days.flatMap((day) => day.events)),
-    [calendar.days],
+    () => calendar ? dedupeEvents(calendar.days.flatMap((day) => day.events)) : [],
+    [calendar],
   );
+  if (!calendar) {
+    return (
+      <AppShell title="Calendar" subtitle="The complete Houston majlis calendar">
+        <CalendarLoadingSkeleton />
+      </AppShell>
+    );
+  }
   const selectedDay = calendar.days.find((day) => day.date === activeDayDate)
     || calendar.days.find((day) => day.isCurrentMonth)
     || calendar.days[0];

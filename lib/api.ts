@@ -31,6 +31,13 @@ import {
   fetchPrayerTimesFromFirebase,
   fetchProductionSyncStateFromFirebase,
   fetchTodayMajlisFromFirebase,
+  peekCalendarMonthFromFirebase,
+  peekEventsFromFirebase,
+  peekHomeFromFirebase,
+  peekPrayerTimesFromFirebase,
+  peekTodayMajlisFromFirebase,
+  preloadPrimaryFirebaseData,
+  subscribeTodayMajlisFromFirebase,
   isFirebaseBackendEnabled,
   createEventFromSubmissionInFirebase,
   deleteAdminEventInFirebase,
@@ -161,6 +168,11 @@ export async function fetchEvents(filter = 'all'): Promise<CommunityEvent[]> {
   return result.events;
 }
 
+export function peekEvents(filter = 'all'): CommunityEvent[] | undefined {
+  if (isFirebaseBackendEnabled()) return peekEventsFromFirebase(filter);
+  return events.filter((event) => matchesFilter(event, filter as CalendarFilter));
+}
+
 export async function fetchCalendarMonth(date = getHoustonDate(), filter: CalendarFilter = 'all'): Promise<CalendarMonthPayload> {
   if (isFirebaseBackendEnabled()) return fetchCalendarMonthFromFirebase(date, filter);
 
@@ -172,6 +184,20 @@ export async function fetchCalendarMonth(date = getHoustonDate(), filter: Calend
     islamicEvents,
   });
   return request<CalendarMonthPayload>(`/calendar/month?date=${encodeURIComponent(date)}&filter=${encodeURIComponent(filter)}`, fallback);
+}
+
+export function peekCalendarMonth(
+  date = getHoustonDate(),
+  filter: CalendarFilter = 'all',
+): CalendarMonthPayload | undefined {
+  if (isFirebaseBackendEnabled()) return peekCalendarMonthFromFirebase(date, filter);
+  return buildCalendarMonth({
+    date,
+    filter,
+    events: events.filter((event) => matchesFilter(event, filter)),
+    calendarYears: islamicCalendarYears,
+    islamicEvents,
+  });
 }
 
 export async function fetchHome(): Promise<HomePayload & { specialEvent: SpecialEvent }> {
@@ -194,6 +220,11 @@ export async function fetchHome(): Promise<HomePayload & { specialEvent: Special
   };
 }
 
+export function peekHome(): (HomePayload & { specialEvent: SpecialEvent }) | undefined {
+  if (isFirebaseBackendEnabled()) return peekHomeFromFirebase();
+  return { ...fallbackHome, specialEvent };
+}
+
 export async function fetchTodayMajlis(): Promise<StatusItem[]> {
   if (isFirebaseBackendEnabled()) return fetchTodayMajlisFromFirebase();
 
@@ -203,6 +234,20 @@ export async function fetchTodayMajlis(): Promise<StatusItem[]> {
     status: event.status || (index === 0 ? 'Started' : 'Pending'),
     stage: event.stage || (event.status === 'Started' ? 'Hadis e Kisa' : undefined),
   }));
+}
+
+export function peekTodayMajlis(): StatusItem[] | undefined {
+  if (isFirebaseBackendEnabled()) return peekTodayMajlisFromFirebase();
+  return statusItems;
+}
+
+export function subscribeTodayMajlis(
+  onItems: (items: StatusItem[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  if (isFirebaseBackendEnabled()) return subscribeTodayMajlisFromFirebase(onItems, onError);
+  onItems(statusItems);
+  return () => undefined;
 }
 
 export async function updateMajlisStatus(eventId: string, eventDate: string, status: StatusItem['status'], stage?: string): Promise<StatusItem[]> {
@@ -229,6 +274,17 @@ export async function fetchPrayerTimes(): Promise<PrayerTime[]> {
 
   const result = await request<{ times: PrayerTime[] }>('/prayer-times/today', { times: prayerTimes });
   return result.times;
+}
+
+export function peekPrayerTimes(): PrayerTime[] | undefined {
+  if (isFirebaseBackendEnabled()) return peekPrayerTimesFromFirebase();
+  return prayerTimes;
+}
+
+export async function preloadPrimaryData(): Promise<void> {
+  if (isFirebaseBackendEnabled()) {
+    await preloadPrimaryFirebaseData();
+  }
 }
 
 export async function fetchIslamicCalendarYears(): Promise<IslamicCalendarYear[]> {

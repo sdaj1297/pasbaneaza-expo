@@ -2,8 +2,14 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import type { FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import type { Auth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -22,6 +28,8 @@ const requiredKeys = [
   firebaseConfig.appId,
 ];
 
+let firestore: Firestore | undefined;
+
 export function isFirebaseConfigured() {
   return requiredKeys.every(Boolean);
 }
@@ -35,7 +43,15 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseDb(): Firestore {
-  return getFirestore(getFirebaseApp());
+  if (!firestore) {
+    const app = getFirebaseApp();
+    firestore = initializeFirestore(app, {
+      localCache: Platform.OS === 'web'
+        ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        : memoryLocalCache(),
+    });
+  }
+  return firestore;
 }
 
 export function getFirebaseAuth(): Auth {

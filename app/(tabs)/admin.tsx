@@ -7,7 +7,7 @@ import { AppShell } from '@/components/AppShell';
 import { Card } from '@/components/Card';
 import { FormPicker } from '@/components/FormPicker';
 import { colors, fonts, radii, spacing, typography } from '@/constants/theme';
-import { CommunityEvent, MajlisStatus, StatusItem, statusItems } from '@/data/mock';
+import { CommunityEvent, MajlisStatus, StatusItem } from '@/data/mock';
 import {
   AdminEventReviewInput,
   AdminEventSubmission,
@@ -16,7 +16,8 @@ import {
   fetchAdminEventSubmissions,
   fetchIslamicCalendarYears,
   fetchProductionSyncState,
-  fetchTodayMajlis,
+  peekTodayMajlis,
+  subscribeTodayMajlis,
   updateEventSubmissionStatus,
   updateIslamicMonthLength,
   updateMajlisStatus,
@@ -41,7 +42,7 @@ type AdminSection = (typeof adminSections)[number];
 
 export default function AdminScreen() {
   const [section, setSection] = useState<AdminSection>('Events');
-  const [items, setItems] = useState<StatusItem[]>(statusItems);
+  const [items, setItems] = useState<StatusItem[]>(() => peekTodayMajlis() ?? []);
   const [calendarYears, setCalendarYears] = useState<IslamicCalendarYear[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [calendarNotice, setCalendarNotice] = useState('');
@@ -65,7 +66,7 @@ export default function AdminScreen() {
   useEffect(() => {
     if (!authUser?.isAdmin) return;
 
-    fetchTodayMajlis().then(setItems);
+    const unsubscribeStatus = subscribeTodayMajlis(setItems);
     fetchIslamicCalendarYears().then((years) => {
       const sorted = [...years].sort((a, b) => b.year - a.year);
       setCalendarYears(sorted);
@@ -73,6 +74,8 @@ export default function AdminScreen() {
     });
     refreshEvents();
     fetchProductionSyncState().then(setSyncState);
+
+    return unsubscribeStatus;
   }, [authUser?.isAdmin]);
 
   const activeCalendarYear = useMemo(

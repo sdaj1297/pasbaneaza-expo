@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -48,9 +49,32 @@ import type {
   PublicSubmissionResult,
 } from '@/lib/api';
 import { audienceToEventType } from '@/lib/eventFormOptions';
+import {
+  invalidateCached,
+  invalidateCachedPrefix,
+  loadCached,
+  peekCached,
+  setCached,
+} from '@/lib/dataCache';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
+const EVENT_CACHE_KEY = 'firebase:events';
+const CALENDAR_YEARS_CACHE_KEY = 'firebase:islamic-calendar';
+const ISLAMIC_EVENTS_CACHE_KEY = 'firebase:islamic-events';
+const HOME_CACHE_KEY = 'firebase:home';
+const PRAYER_CACHE_KEY = 'firebase:prayer-times';
+const EVENT_TTL_MS = 60_000;
+const CONTENT_TTL_MS = 5 * 60_000;
+const STATUS_TTL_MS = 15_000;
+const EMPTY_SPECIAL_EVENT: SpecialEvent = {
+  id: 'none',
+  eyebrow: '',
+  title: '',
+  dateLabel: '',
+  description: '',
+  isActive: false,
+};
 
 export function isFirebaseBackendEnabled() {
   return process.env.EXPO_PUBLIC_DATA_BACKEND === 'firebase' && isFirebaseConfigured();
@@ -63,25 +87,38 @@ export async function fetchEventsFromFirebase(
   if (!isFirebaseBackendEnabled()) return fallbackEvents;
 
   try {
+    const events = await fetchAllEventsFromFirebase();
+    return filterEvents(events, filter, options);
+  } catch (error) {
+    console.warn('Unable to load events from Firestore.', error);
+    return [];
+  }
+}
+
+async function fetchAllEventsFromFirebase(): Promise<CommunityEvent[]> {
+  return loadCached(EVENT_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const [snapshot, calendarYears] = await Promise.all([
       getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS))),
       fetchIslamicCalendarYearsFromFirebase(),
     ]);
-    const from = options.from || getHoustonDate();
-    const events = snapshot.docs
+    return snapshot.docs
       .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
-      .map((event) => withCalculatedIslamicDate(event, calendarYears))
+      .map((event) => withCalculatedIslamicDate(event, calendarYears));
+  }, EVENT_TTL_MS);
+}
+
+function filterEvents(
+  events: CommunityEvent[],
+  filter: string,
+  options: { from?: string; to?: string; approvedOnly?: boolean } = {},
+) {
+  const from = options.from || getHoustonDate();
+  return events
       .filter((event) => isPublicEvent(event, Boolean(options.approvedOnly)))
       .filter((event) => event.date >= from)
       .filter((event) => !options.to || event.date <= options.to)
       .filter((event) => matchesFilter(event, filter));
-
-    return events;
-  } catch (error) {
-    console.warn('Falling back to mock events after Firestore read failed.', error);
-    return fallbackEvents;
-  }
 }
 
 export async function fetchCalendarMonthFromFirebase(
@@ -98,20 +135,23 @@ export async function fetchCalendarMonthFromFirebase(
     });
   }
 
-  const range = getMonthRange(date);
-  const [events, calendarYears, islamicEvents] = await Promise.all([
-    fetchEventsFromFirebase(filter, { from: range.gridStart, to: range.gridEnd }),
-    fetchIslamicCalendarYearsFromFirebase(),
-    fetchIslamicEventsFromFirebase(),
-  ]);
+  const cacheKey = `firebase:calendar:${date.slice(0, 7)}:${filter}`;
+  return loadCached(cacheKey, async () => {
+    const range = getMonthRange(date);
+    const [events, calendarYears, islamicEvents] = await Promise.all([
+      fetchEventsFromFirebase(filter, { from: range.gridStart, to: range.gridEnd }),
+      fetchIslamicCalendarYearsFromFirebase(),
+      fetchIslamicEventsFromFirebase(),
+    ]);
 
-  return buildCalendarMonth({
-    date,
-    filter,
-    events,
-    calendarYears,
-    islamicEvents,
-  });
+    return buildCalendarMonth({
+      date,
+      filter,
+      events,
+      calendarYears,
+      islamicEvents,
+    });
+  }, EVENT_TTL_MS);
 }
 
 export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEvent: SpecialEvent }> {
@@ -120,6 +160,7 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
   }
 
   try {
+    return await loadCached(HOME_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const today = getHoustonDate();
     const [homeDoc, bannerSnapshot, events, calendarYears] = await Promise.all([
@@ -147,11 +188,12 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
       sayings: Array.isArray(home.sayings) ? home.sayings : [],
       prayerTimes: normalizePrayerTimes(home.prayerTimes),
       upcomingEvents,
-      specialEvent: activeBanner || fallbackSpecialEvent,
+      specialEvent: activeBanner || EMPTY_SPECIAL_EVENT,
     };
+    }, EVENT_TTL_MS);
   } catch (error) {
-    console.warn('Falling back to mock home data after Firestore read failed.', error);
-    return fallbackHome();
+    console.warn('Unable to load home data from Firestore.', error);
+    return emptyHome();
   }
 }
 
@@ -159,8 +201,9 @@ export async function fetchTodayMajlisFromFirebase(): Promise<StatusItem[]> {
   if (!isFirebaseBackendEnabled()) return fallbackStatusItems;
 
   try {
-    const db = getFirebaseDb();
     const today = getHoustonDate();
+    return await loadCached(`firebase:status:${today}`, async () => {
+    const db = getFirebaseDb();
     const [eventSnapshot, statusSnapshot] = await Promise.all([
       getDocs(query(collection(db, 'eventDays', today, 'items'), orderBy('sortTime'), limit(MAX_EVENT_READS))),
       getDocs(collection(db, 'majlisStatus', today, 'events')),
@@ -188,9 +231,10 @@ export async function fetchTodayMajlisFromFirebase(): Promise<StatusItem[]> {
     });
 
     return statusItems;
+    }, STATUS_TTL_MS);
   } catch (error) {
-    console.warn('Falling back to mock majlis status after Firestore read failed.', error);
-    return fallbackStatusItems;
+    console.warn('Unable to load majlis status from Firestore.', error);
+    return [];
   }
 }
 
@@ -216,13 +260,81 @@ export async function updateMajlisStatusInFirebase(
     { merge: true },
   );
 
+  invalidateCached(`firebase:status:${eventDate}`);
   return fetchTodayMajlisFromFirebase();
+}
+
+export function subscribeTodayMajlisFromFirebase(
+  onItems: (items: StatusItem[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  if (!isFirebaseBackendEnabled()) {
+    onItems(fallbackStatusItems);
+    return () => undefined;
+  }
+
+  const db = getFirebaseDb();
+  const today = getHoustonDate();
+  const cacheKey = `firebase:status:${today}`;
+  let eventItems: CommunityEvent[] = [];
+  let statusByEventId = new Map<string, DocumentData>();
+  let eventsReady = false;
+  let statusesReady = false;
+  let disposed = false;
+
+  const publish = async () => {
+    if (!eventsReady || !statusesReady || disposed) return;
+    let events = eventItems;
+    if (!events.length) {
+      events = (await fetchEventsFromFirebase('anjuman')).filter((event) => event.date === today);
+    }
+    if (disposed) return;
+
+    const items = mergeMajlisStatuses(events, statusByEventId);
+    setCached(cacheKey, items);
+    onItems(items);
+  };
+
+  const handleError = (error: Error) => {
+    onError?.(error);
+    const cached = peekCached<StatusItem[]>(cacheKey);
+    onItems(cached ?? []);
+  };
+
+  const unsubscribeEvents = onSnapshot(
+    query(collection(db, 'eventDays', today, 'items'), orderBy('sortTime'), limit(MAX_EVENT_READS)),
+    (snapshot) => {
+      eventItems = snapshot.docs
+        .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
+        .filter((event) => isPublicEvent(event, true))
+        .filter((event) => event.isAnjumanSchedule);
+      eventsReady = true;
+      void publish();
+    },
+    handleError,
+  );
+  const unsubscribeStatuses = onSnapshot(
+    collection(db, 'majlisStatus', today, 'events'),
+    (snapshot) => {
+      statusByEventId = new Map(snapshot.docs.map((statusDoc) => [statusDoc.id, statusDoc.data()]));
+      statusesReady = true;
+      void publish();
+    },
+    handleError,
+  );
+
+  return () => {
+    disposed = true;
+    unsubscribeEvents();
+    unsubscribeStatuses();
+  };
 }
 
 export async function fetchIslamicCalendarYearsFromFirebase(): Promise<IslamicCalendarYear[]> {
   if (!isFirebaseBackendEnabled()) return fallbackIslamicCalendarYears;
 
   try {
+    return await loadCached(CALENDAR_YEARS_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const snapshot = await getDocs(query(collection(db, 'islamicCalendar'), orderBy('year'), limit(80)));
     const years = snapshot.docs
@@ -230,8 +342,9 @@ export async function fetchIslamicCalendarYearsFromFirebase(): Promise<IslamicCa
       .filter((year) => year.months.length === 12 && Boolean(year.firstDate));
 
     return years.length ? years : fallbackIslamicCalendarYears;
+    }, CONTENT_TTL_MS);
   } catch (error) {
-    console.warn('Falling back to mock Islamic calendar after Firestore read failed.', error);
+    console.warn('Unable to load Islamic calendar from Firestore.', error);
     return fallbackIslamicCalendarYears;
   }
 }
@@ -277,6 +390,8 @@ export async function updateIslamicMonthLengthInFirebase(
     { merge: true },
   );
 
+  invalidateCached(CALENDAR_YEARS_CACHE_KEY, HOME_CACHE_KEY);
+  invalidateCachedPrefix('firebase:calendar:');
   return nextYear;
 }
 
@@ -284,13 +399,15 @@ export async function fetchPrayerTimesFromFirebase(): Promise<PrayerTime[]> {
   if (!isFirebaseBackendEnabled()) return fallbackPrayerTimes;
 
   try {
+    return await loadCached(PRAYER_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const snapshot = await getDoc(doc(db, 'settings', 'prayerTimes'));
     const data = snapshot.exists() ? snapshot.data() : {};
     return normalizePrayerTimes(data.times);
+    }, CONTENT_TTL_MS);
   } catch (error) {
-    console.warn('Falling back to mock prayer times after Firestore read failed.', error);
-    return fallbackPrayerTimes;
+    console.warn('Unable to load prayer times from Firestore.', error);
+    return [];
   }
 }
 
@@ -484,6 +601,7 @@ export async function deleteAdminEventInFirebase(eventId: string, eventDate: str
 
   await deleteDoc(doc(db, 'events', eventId));
   await deleteDoc(doc(db, 'eventDays', eventDate, 'items', eventId));
+  invalidateEventCaches();
 }
 
 async function writeEvent(event: CommunityEvent, originalDate?: string): Promise<void> {
@@ -509,6 +627,7 @@ async function writeEvent(event: CommunityEvent, originalDate?: string): Promise
   if (originalDate && originalDate !== event.date) {
     await deleteDoc(doc(db, 'eventDays', originalDate, 'items', event.id));
   }
+  invalidateEventCaches();
 }
 
 export type ProductionSyncState = {
@@ -565,14 +684,80 @@ async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]>
   if (!isFirebaseBackendEnabled()) return fallbackIslamicEvents;
 
   try {
+    return await loadCached(ISLAMIC_EVENTS_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const snapshot = await getDocs(query(collection(db, 'islamicEvents'), limit(120)));
     const events = snapshot.docs.map((eventDoc) => normalizeIslamicCalendarEvent(eventDoc.id, eventDoc.data()));
     return events.length ? events : fallbackIslamicEvents;
+    }, CONTENT_TTL_MS);
   } catch (error) {
-    console.warn('Falling back to mock Islamic events after Firestore read failed.', error);
+    console.warn('Unable to load Islamic events from Firestore.', error);
     return fallbackIslamicEvents;
   }
+}
+
+export function peekEventsFromFirebase(
+  filter = 'all',
+  options: { from?: string; to?: string; approvedOnly?: boolean } = {},
+): CommunityEvent[] | undefined {
+  const events = peekCached<CommunityEvent[]>(EVENT_CACHE_KEY);
+  return events ? filterEvents(events, filter, options) : undefined;
+}
+
+export function peekHomeFromFirebase(): (HomePayload & { specialEvent: SpecialEvent }) | undefined {
+  return peekCached(HOME_CACHE_KEY);
+}
+
+export function peekCalendarMonthFromFirebase(
+  date: string,
+  filter: CalendarFilter,
+): CalendarMonthPayload | undefined {
+  return peekCached(`firebase:calendar:${date.slice(0, 7)}:${filter}`);
+}
+
+export function peekTodayMajlisFromFirebase(): StatusItem[] | undefined {
+  return peekCached(`firebase:status:${getHoustonDate()}`);
+}
+
+export function peekPrayerTimesFromFirebase(): PrayerTime[] | undefined {
+  return peekCached(PRAYER_CACHE_KEY);
+}
+
+export async function preloadPrimaryFirebaseData(): Promise<void> {
+  if (!isFirebaseBackendEnabled()) return;
+  const today = getHoustonDate();
+  await Promise.allSettled([
+    fetchEventsFromFirebase('all'),
+    fetchIslamicCalendarYearsFromFirebase(),
+    fetchPrayerTimesFromFirebase(),
+  ]);
+
+  await Promise.allSettled(
+    (['all', 'anjuman', 'brothers', 'sisters', 'family'] as CalendarFilter[]).map((filter) =>
+      fetchCalendarMonthFromFirebase(today, filter),
+    ),
+  );
+}
+
+function mergeMajlisStatuses(
+  events: CommunityEvent[],
+  statusByEventId: Map<string, DocumentData>,
+): StatusItem[] {
+  return events.map((event) => {
+    const statusData = statusByEventId.get(event.id) || {};
+    const status = normalizeStatus(statusData.status);
+    return {
+      ...event,
+      status,
+      stage: typeof statusData.stage === 'string' && statusData.stage.trim() ? statusData.stage : undefined,
+      updatedAt: normalizeTimestamp(statusData.updatedAt) || undefined,
+    };
+  });
+}
+
+function invalidateEventCaches() {
+  invalidateCached(EVENT_CACHE_KEY, HOME_CACHE_KEY);
+  invalidateCachedPrefix('firebase:calendar:');
 }
 
 function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
@@ -589,6 +774,23 @@ function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
     prayerTimes: fallbackPrayerTimes,
     upcomingEvents: fallbackEvents,
     specialEvent: fallbackSpecialEvent,
+  };
+}
+
+function emptyHome(): HomePayload & { specialEvent: SpecialEvent } {
+  const today = getHoustonDate();
+  return {
+    date: today,
+    label: getDisplayDate(today),
+    timezone: HOUSTON_TIME_ZONE,
+    islamicDate: null,
+    islamicEvents: [],
+    announcements: [],
+    featuredAnnouncement: null,
+    sayings: [],
+    prayerTimes: [],
+    upcomingEvents: [],
+    specialEvent: EMPTY_SPECIAL_EVENT,
   };
 }
 
@@ -718,7 +920,7 @@ function normalizeBanner(id: string, data: DocumentData, today: string): Special
 }
 
 function normalizePrayerTimes(value: unknown): PrayerTime[] {
-  if (!Array.isArray(value)) return fallbackPrayerTimes;
+  if (!Array.isArray(value)) return [];
   const times = value
     .map((item) => ({
       label: String(item?.label || ''),
@@ -726,7 +928,7 @@ function normalizePrayerTimes(value: unknown): PrayerTime[] {
     }))
     .filter((item) => item.label && item.time);
 
-  return times.length ? times : fallbackPrayerTimes;
+  return times;
 }
 
 function isPublicEvent(event: CommunityEvent, approvedOnly = false) {
