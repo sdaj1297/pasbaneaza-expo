@@ -4,6 +4,7 @@ type GregorianDateStyle = 'short' | 'hero' | 'long';
 
 const gregorianOptions: Record<GregorianDateStyle, Intl.DateTimeFormatOptions> = {
   short: {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
