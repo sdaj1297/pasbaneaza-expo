@@ -179,3 +179,21 @@ The importer writes:
 - `settings/home`
 
 It does not delete old Firestore documents yet. For beta, re-importing overwrites matching IDs and leaves unmatched documents alone.
+
+# One-time production import
+
+The beta Firestore database can be refreshed from a local production MySQL
+export without enabling the retired production synchronization job.
+
+1. Import the production SQL export into the isolated local MySQL database.
+2. Set `FIREBASE_SERVICE_ACCOUNT_FILE` to a local Firebase Admin service
+   account file. Never commit that file.
+3. Run `npm run firebase:import-production -- dry-run`.
+4. Run `npm run firebase:import-production -- apply`.
+5. Run `npm run firebase:import-production -- verify`.
+
+The apply command creates a compressed Firestore backup in the current
+user's Downloads directory before writing. It updates the normalized
+production mirror and effective schedule while preserving Firebase
+Authentication, submissions, beta-only event overrides, memberships,
+reminders, and majlis statuses.
