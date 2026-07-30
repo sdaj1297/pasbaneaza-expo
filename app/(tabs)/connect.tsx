@@ -39,7 +39,7 @@ const signupTypes: {
   {
     type: 'event',
     title: 'Add Event',
-    description: 'Send a majlis or community program for review.',
+    description: 'Add a majlis or program to the community calendar.',
     icon: CalendarPlus,
   },
   {
@@ -213,9 +213,6 @@ export default function ConnectScreen() {
               eventAddress: form.eventAddress,
               eventAudience: form.eventAudience,
               requestsAnjuman: form.requestsAnjuman === 'yes',
-              addToSchedule: form.requestsAnjuman === 'yes',
-              ADDTOSCHD: form.requestsAnjuman === 'yes',
-              reviewStatus: 'pending_review',
             }
           : selectedType === 'reminder'
             ? {
@@ -236,8 +233,12 @@ export default function ConnectScreen() {
         setNotice('');
       } else {
         setNotice(
-          result.status === 'pending_review'
-            ? 'Event submitted for review. It will appear publicly after approval.'
+          result.status === 'published_anjuman_pending'
+            ? 'Event published to the community calendar. Your Anjuman participation request is awaiting approval.'
+            : result.status === 'published'
+              ? 'Event published to the community calendar.'
+              : result.status === 'pending_review'
+                ? 'Event received for review. It will be published after the Pasban team confirms it.'
             : (selectedType === 'membership' || selectedType === 'volunteer') && result.notificationSent === false
               ? `Your ${selectedType === 'membership' ? 'membership request' : 'volunteer signup'} was saved, but the team notification could not be sent. Please contact Pasban if you do not hear from us.`
               : (selectedType === 'membership' || selectedType === 'volunteer') && result.confirmationSent === false && form.email
@@ -246,8 +247,10 @@ export default function ConnectScreen() {
         );
       }
       setForm(initialForm);
-    } catch {
-      setNotice('Unable to submit right now. Please try again.');
+    } catch (error) {
+      setNotice(error instanceof Error && error.message
+        ? error.message
+        : 'Unable to submit right now. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -291,7 +294,7 @@ export default function ConnectScreen() {
           </Text>
           <Text style={styles.formIntro}>
             {selectedType === 'event'
-              ? 'Submissions remain pending until the Pasban team confirms and publishes them.'
+              ? 'Your event will appear on the community calendar after submission. Anjuman participation requests require separate approval.'
               : selectedType === 'reminder'
                 ? 'Complete this short signup, then join the group to receive Pasban announcements on WhatsApp.'
                 : 'Share your contact details and the Pasban team will follow up.'}
@@ -453,7 +456,7 @@ export default function ConnectScreen() {
                   {isSubmitting
                     ? 'Submitting...'
                     : selectedType === 'event'
-                      ? 'Submit for review'
+                      ? 'Publish event'
                       : selectedType === 'reminder'
                         ? 'Continue to WhatsApp'
                         : 'Send'}

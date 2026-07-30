@@ -18,6 +18,12 @@ const yesNoOptions: SelectOption[] = [
   { label: 'Yes', value: 'yes' },
   { label: 'No', value: 'no' },
 ];
+const anjumanApprovalOptions: SelectOption[] = [
+  { label: 'Not requested', value: 'not_requested' },
+  { label: 'Pending review', value: 'pending' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Declined', value: 'declined' },
+];
 
 export type AdminEventDraft = {
   title: string;
@@ -28,8 +34,8 @@ export type AdminEventDraft = {
   locationName: string;
   audience: string;
   isAnjumanSchedule: string;
+  anjumanApprovalStatus: string;
   isPublished: string;
-  waitingApproval: string;
   isPlaceholder: string;
 };
 
@@ -100,10 +106,19 @@ export function AdminEventForm({
         <FormPicker layout="grid" label="Date" value={draft.date} options={currentDateOptions} onChange={(value) => updateDraft('date', value)} />
         <FormPicker layout="grid" label="Time" value={draft.time} options={currentTimeOptions} onChange={(value) => updateDraft('time', value)} />
         <FormPicker layout="grid" label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
-        <FormPicker layout="grid" label="Add To Anjuman Schedule" value={draft.isAnjumanSchedule} options={yesNoOptions} onChange={(value) => updateDraft('isAnjumanSchedule', value)} />
+        <FormPicker layout="grid" label="Anjuman Request" value={draft.anjumanApprovalStatus} options={anjumanApprovalOptions} onChange={(value) => {
+          updateDraft('anjumanApprovalStatus', value);
+          updateDraft('isAnjumanSchedule', value === 'approved' ? 'yes' : 'no');
+        }} />
         <FormPicker layout="grid" label="Published" value={draft.isPublished} options={yesNoOptions} onChange={(value) => updateDraft('isPublished', value)} />
-        <FormPicker layout="grid" label="Waiting For Approval" value={draft.waitingApproval} options={yesNoOptions} onChange={(value) => updateDraft('waitingApproval', value)} />
-        <FormPicker layout="grid" label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => updateDraft('isPlaceholder', value)} />
+        <FormPicker layout="grid" label="Placeholder" value={draft.isPlaceholder} options={yesNoOptions} onChange={(value) => {
+          updateDraft('isPlaceholder', value);
+          if (value === 'yes') {
+            updateDraft('isPublished', 'no');
+            updateDraft('isAnjumanSchedule', 'no');
+            updateDraft('anjumanApprovalStatus', 'pending');
+          }
+        }} />
         <Field label="Location name">
           <TextInput
             placeholder="Location name"
@@ -151,8 +166,9 @@ function eventToDraft(event: CommunityEvent): AdminEventDraft {
     locationName: event.locationName || '',
     audience: eventTypeToAudience(event.type),
     isAnjumanSchedule: event.isAnjumanSchedule ? 'yes' : 'no',
+    anjumanApprovalStatus: event.anjumanApprovalStatus
+      || (event.isAnjumanSchedule ? 'approved' : event.waitingApproval ? 'pending' : 'not_requested'),
     isPublished: event.isPublished ? 'yes' : 'no',
-    waitingApproval: event.waitingApproval ? 'yes' : 'no',
     isPlaceholder: event.isPlaceholder ? 'yes' : 'no',
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'expo-router';
-import { Pencil } from 'lucide-react-native';
+import { Check, Pencil, X } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
@@ -17,6 +17,7 @@ import {
   fetchIslamicCalendarYears,
   peekTodayMajlis,
   subscribeTodayMajlis,
+  updateAdminEvent,
   updateEventSubmissionStatus,
   updateIslamicMonthLength,
   updateMajlisStatus,
@@ -78,7 +79,9 @@ export default function AdminScreen() {
   );
 
   const pendingSubmissions = eventSubmissions.filter((submission) => submission.status === 'pending_review');
-  const pendingEvents = adminEvents.filter((event) => event.waitingApproval);
+  const pendingEvents = adminEvents.filter((event) =>
+    event.anjumanApprovalStatus === 'pending' || event.waitingApproval,
+  );
 
   const refreshEvents = async () => {
     setEventsBusy(true);
@@ -163,6 +166,42 @@ export default function AdminScreen() {
     }
   };
 
+  const handleAnjumanDecision = async (
+    event: CommunityEvent,
+    decision: 'approved' | 'declined',
+  ) => {
+    setEventsNotice('');
+    if (event.isPlaceholder) {
+      setEventsNotice('Open this placeholder and complete it before making an Anjuman decision.');
+      return;
+    }
+    setEventsBusy(true);
+    try {
+      await updateAdminEvent(event.id, event.date, {
+        anjumanApprovalStatus: decision,
+        isAnjumanSchedule: decision === 'approved',
+        isPublished: !event.isPlaceholder,
+        waitingApproval: false,
+        isPlaceholder: Boolean(event.isPlaceholder),
+      });
+      if (event.id.startsWith('community-')) {
+        await updateEventSubmissionStatus(
+          event.id.slice('community-'.length),
+          decision === 'approved' ? 'approved' : 'dismissed',
+        );
+      }
+      setEventsNotice(
+        decision === 'approved'
+          ? 'Anjuman participation approved. The event is now on the Anjuman schedule.'
+          : 'Anjuman participation declined. The event remains on the community calendar.',
+      );
+      await refreshEvents();
+    } catch {
+      setEventsNotice('Unable to update the Anjuman request. Please try again.');
+      setEventsBusy(false);
+    }
+  };
+
   return (
     <AppShell title="Admin" subtitle="Review submissions, maintain event data, update status, and adjust the Islamic calendar">
       <View style={styles.stack}>
@@ -217,7 +256,7 @@ export default function AdminScreen() {
                   <View style={styles.panelHeader}>
                     <View style={styles.panelCopy}>
                       <Text style={styles.sectionTitle}>Event Review</Text>
-                      <Text style={styles.sectionMeta}>Pending public submissions can become hidden placeholders or published schedule entries.</Text>
+                      <Text style={styles.sectionMeta}>Review Anjuman participation requests and any remaining legacy event submissions.</Text>
                     </View>
                     <Pressable onPress={refreshEvents} style={styles.secondaryButton}>
                       <Text style={styles.secondaryButtonText}>{eventsBusy ? 'Refreshing...' : 'Refresh'}</Text>
@@ -252,7 +291,12 @@ export default function AdminScreen() {
                 </Card>
 
                 {pendingEvents.map((event) => (
-                  <AdminEventLink event={event} key={event.id} />
+                  <AdminEventLink
+                    disabled={eventsBusy}
+                    event={event}
+                    key={event.id}
+                    onDecision={handleAnjumanDecision}
+                  />
                 ))}
               </>
             ) : null}
@@ -450,22 +494,54 @@ function SubmissionCard({
   );
 }
 
-function AdminEventLink({ event }: { event: CommunityEvent }) {
+function AdminEventLink({
+  disabled,
+  event,
+  onDecision,
+}: {
+  disabled: boolean;
+  event: CommunityEvent;
+  onDecision: (event: CommunityEvent, decision: 'approved' | 'declined') => void;
+}) {
   return (
     <Card>
       <View style={styles.eventLinkRow}>
         <View style={styles.eventLinkCopy}>
           <Text style={styles.name}>{event.contactName || event.title || 'Majlis'}</Text>
           <Text style={styles.meta}>
-            {event.date} / {event.time || 'Time TBD'}{event.isPlaceholder ? ' / Placeholder' : ''}
+            {event.date} / {event.time || 'Time TBD'} / {event.isPlaceholder
+              ? 'Placeholder - complete before publishing'
+              : 'Anjuman requested'}
           </Text>
         </View>
-        <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
-          <Pressable accessibilityLabel={`Edit ${event.contactName || event.title || 'event'}`} style={styles.editEventButton}>
-            <Pencil color={colors.onIvory} size={17} strokeWidth={2} />
-            <Text style={styles.editEventButtonText}>Edit event</Text>
-          </Pressable>
-        </Link>
+        <View style={styles.eventDecisionActions}>
+          {!event.isPlaceholder ? (
+            <>
+              <Pressable
+                disabled={disabled}
+                onPress={() => onDecision(event, 'approved')}
+                style={[styles.approveButton, disabled && styles.disabledButton]}
+              >
+                <Check color={colors.ivory} size={17} strokeWidth={2.2} />
+                <Text style={styles.approveButtonText}>Approve Anjuman</Text>
+              </Pressable>
+              <Pressable
+                disabled={disabled}
+                onPress={() => onDecision(event, 'declined')}
+                style={[styles.declineButton, disabled && styles.disabledButton]}
+              >
+                <X color={colors.muted} size={17} strokeWidth={2.2} />
+                <Text style={styles.declineButtonText}>Decline</Text>
+              </Pressable>
+            </>
+          ) : null}
+          <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
+            <Pressable accessibilityLabel={`Edit ${event.contactName || event.title || 'event'}`} style={styles.editEventButton}>
+              <Pencil color={colors.onIvory} size={17} strokeWidth={2} />
+              <Text style={styles.editEventButtonText}>Edit event</Text>
+            </Pressable>
+          </Link>
+        </View>
       </View>
     </Card>
   );
@@ -724,6 +800,45 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 260,
   },
+  eventDecisionActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  approveButton: {
+    alignItems: 'center',
+    backgroundColor: colors.oxblood,
+    borderColor: colors.oxblood,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+  },
+  approveButtonText: {
+    color: colors.ivory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  declineButton: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+  },
+  declineButtonText: {
+    color: colors.muted,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
   editEventButton: {
     alignItems: 'center',
     backgroundColor: colors.ivory,
@@ -740,6 +855,9 @@ const styles = StyleSheet.create({
     color: colors.onIvory,
     fontFamily: fonts.bodyBold,
     fontSize: typography.small,
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
   stage: {
     color: colors.gold,

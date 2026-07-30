@@ -101,3 +101,25 @@ Current filters:
 - `anjuman`: requires `ADDTOSCHD = 1`
 
 These should be verified with the Pasban team before final launch because legacy labels may not perfectly match current community expectations.
+
+## Firestore Community Events
+
+The production Expo application stores canonical schedule records in `events`
+and duplicates each record under `eventDays/{date}/items` for date-oriented
+reads.
+
+Community event publication and Anjuman participation are independent:
+
+- Public submissions create `isPublished=true`, `isAnjumanSchedule=false`,
+  `waitingApproval=false`, and `isPlaceholder=false`.
+- `isPlaceholder=true` always forces `isPublished=false` and keeps the record
+  from being treated as a published event. The Schedule page may render a
+  sanitized reservation card containing only the holder name, date, and time.
+- `anjumanApprovalStatus` is `not_requested`, `pending`, `approved`, or
+  `declined`.
+- Only `approved` records are placed on the Anjuman schedule.
+- A pending or declined Anjuman request remains visible as a normal community
+  event.
+
+Contact email and phone remain in the admin-only `submissions` collection and
+are not copied into public event documents.

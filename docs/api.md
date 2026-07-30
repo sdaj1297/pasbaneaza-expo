@@ -218,4 +218,13 @@ Body:
 
 Returns a submission id and status. These submissions are stored in `app_form_submissions`.
 
-Public event submissions use `type=event`, include event details in `payload`, and return `status=pending_review`. They must not appear on public event/calendar/status screens until reviewed and approved.
+When Firestore is the active backend, public event submissions are validated by
+the server and immediately create a published community event. The response is:
+
+- `status=published` when Anjuman participation was not requested.
+- `status=published_anjuman_pending` when participation was requested.
+
+An Anjuman request does not hide the community listing. It sets
+`anjumanApprovalStatus=pending` while keeping `isAnjumanSchedule=false`. Admin
+approval changes the status to `approved` and adds the event to the Anjuman
+schedule; declining it leaves the community event published.

@@ -60,6 +60,7 @@ export default function EventEditorScreen() {
     setSaving(true);
     setNotice('');
     try {
+      const isPlaceholder = draft.isPlaceholder === 'yes';
       const updatedEvent = await updateAdminEvent(event.id, event.date, {
         title: draft.title,
         contactName: draft.contactName,
@@ -68,10 +69,11 @@ export default function EventEditorScreen() {
         address: draft.address,
         locationName: draft.locationName,
         type: audienceToEventType(draft.audience),
-        isAnjumanSchedule: draft.isAnjumanSchedule === 'yes',
-        isPublished: draft.isPublished === 'yes',
-        waitingApproval: draft.waitingApproval === 'yes',
-        isPlaceholder: draft.isPlaceholder === 'yes',
+        isAnjumanSchedule: !isPlaceholder && draft.anjumanApprovalStatus === 'approved',
+        anjumanApprovalStatus: (isPlaceholder ? 'pending' : draft.anjumanApprovalStatus) as CommunityEvent['anjumanApprovalStatus'],
+        isPublished: !isPlaceholder && draft.isPublished === 'yes',
+        waitingApproval: false,
+        isPlaceholder,
       });
       setEvent(updatedEvent);
       setNotice('Event changes saved.');

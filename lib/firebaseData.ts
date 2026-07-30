@@ -84,7 +84,7 @@ export function isFirebaseBackendEnabled() {
 
 export async function fetchEventsFromFirebase(
   filter = 'all',
-  options: { from?: string; to?: string; approvedOnly?: boolean } = {},
+  options: { from?: string; to?: string; approvedOnly?: boolean; includePlaceholders?: boolean } = {},
 ): Promise<CommunityEvent[]> {
   if (!isFirebaseBackendEnabled()) return fallbackEvents;
 
@@ -120,11 +120,14 @@ async function fetchEventsForRangeFromFirebase(from: string, to?: string): Promi
 function filterEvents(
   events: CommunityEvent[],
   filter: string,
-  options: { from?: string; to?: string; approvedOnly?: boolean } = {},
+  options: { from?: string; to?: string; approvedOnly?: boolean; includePlaceholders?: boolean } = {},
 ) {
   const from = options.from || getHoustonDate();
   return events
-      .filter((event) => isPublicEvent(event, Boolean(options.approvedOnly)))
+      .filter((event) =>
+        isPublicEvent(event, Boolean(options.approvedOnly))
+        || Boolean(options.includePlaceholders && event.isPlaceholder && event.date),
+      )
       .filter((event) => event.date >= from)
       .filter((event) => !options.to || event.date <= options.to)
       .filter((event) => matchesFilter(event, filter))
@@ -519,7 +522,10 @@ export async function createEventFromSubmissionInFirebase(
     flyer: stringOrUndefined(payload.flyerUrl),
     socialUrl: stringOrUndefined(payload.socialUrl),
     isAnjumanSchedule: review.isAnjumanSchedule,
-    isPublished: review.isPublished,
+    anjumanApprovalStatus: review.waitingApproval
+      ? 'pending'
+      : review.isAnjumanSchedule ? 'approved' : 'not_requested',
+    isPublished: review.isPublished && !review.isPlaceholder,
     waitingApproval: review.waitingApproval,
     isPlaceholder: review.isPlaceholder,
   };
@@ -604,7 +610,7 @@ async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]>
 
 export function peekEventsFromFirebase(
   filter = 'all',
-  options: { from?: string; to?: string; approvedOnly?: boolean } = {},
+  options: { from?: string; to?: string; approvedOnly?: boolean; includePlaceholders?: boolean } = {},
 ): CommunityEvent[] | undefined {
   const from = options.from || getHoustonDate();
   const events = peekCached<CommunityEvent[]>(`${EVENT_CACHE_PREFIX}${from}:${options.to || ''}`);
@@ -666,6 +672,10 @@ function invalidateEventCaches() {
   invalidateCached(HOME_CACHE_KEY);
   invalidateCachedPrefix(EVENT_CACHE_PREFIX);
   invalidateCachedPrefix('firebase:calendar:');
+}
+
+export function invalidateFirebaseEventCaches() {
+  invalidateEventCaches();
 }
 
 function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
@@ -738,6 +748,8 @@ function normalizeIslamicCalendarEvent(id: string, data: DocumentData): IslamicC
 }
 
 function normalizeEvent(id: string, data: DocumentData): CommunityEvent {
+  const isAnjumanSchedule = Boolean(data.isAnjumanSchedule ?? data.addToSchedule ?? data.ADDTOSCHD);
+  const waitingApproval = Boolean(data.waitingApproval || data.WAITING_APPROVAL);
   return {
     id: String(data.id || data.eventId || id),
     title: String(data.title || data.eventTitle || data.EVENT_DESC || 'Majlis'),
@@ -750,10 +762,15 @@ function normalizeEvent(id: string, data: DocumentData): CommunityEvent {
     address: String(data.address || data.fullAddress || ''),
     flyer: stringOrUndefined(data.flyer || data.flyerUrl || data.imageUrl),
     socialUrl: stringOrUndefined(data.socialUrl || data.youtubeUrl || data.instagramUrl),
-    isAnjumanSchedule: Boolean(data.isAnjumanSchedule ?? data.addToSchedule ?? data.ADDTOSCHD),
+    isAnjumanSchedule,
     isPublished: data.isPublished !== false && data.publish !== false && data.PUBLISH !== 0,
-    waitingApproval: Boolean(data.waitingApproval || data.WAITING_APPROVAL),
+    waitingApproval,
     isPlaceholder: Boolean(data.isPlaceholder || data.placeholder || data.PLACE_HOLDER),
+    anjumanApprovalStatus: normalizeAnjumanApprovalStatus(
+      data.anjumanApprovalStatus,
+      isAnjumanSchedule,
+      waitingApproval,
+    ),
   };
 }
 
@@ -785,6 +802,7 @@ function normalizeSubmission(id: string, data: DocumentData): AdminEventSubmissi
 }
 
 function serializeEvent(event: CommunityEvent): Record<string, unknown> {
+  const isPublished = event.isPublished !== false && !event.isPlaceholder;
   return {
     id: event.id,
     eventId: event.id,
@@ -801,8 +819,10 @@ function serializeEvent(event: CommunityEvent): Record<string, unknown> {
     socialUrl: event.socialUrl || '',
     isAnjumanSchedule: Boolean(event.isAnjumanSchedule),
     addToSchedule: Boolean(event.isAnjumanSchedule),
-    isPublished: event.isPublished !== false,
-    publish: event.isPublished !== false,
+    anjumanApprovalStatus: event.anjumanApprovalStatus
+      || (event.isAnjumanSchedule ? 'approved' : 'not_requested'),
+    isPublished,
+    publish: isPublished,
     waitingApproval: Boolean(event.waitingApproval),
     isPlaceholder: Boolean(event.isPlaceholder),
     source: 'beta',
@@ -837,10 +857,24 @@ function isPublicEvent(event: CommunityEvent, _approvedOnly = false) {
   );
 }
 
+function normalizeAnjumanApprovalStatus(
+  value: unknown,
+  isAnjumanSchedule: boolean,
+  waitingApproval: boolean,
+): CommunityEvent['anjumanApprovalStatus'] {
+  const status = String(value || '');
+  if (['not_requested', 'pending', 'approved', 'declined'].includes(status)) {
+    return status as CommunityEvent['anjumanApprovalStatus'];
+  }
+  if (isAnjumanSchedule) return 'approved';
+  if (waitingApproval) return 'pending';
+  return 'not_requested';
+}
+
 function matchesFilter(event: CommunityEvent, filter: string) {
   switch (filter) {
     case 'anjuman':
-      return event.isAnjumanSchedule;
+      return event.isAnjumanSchedule && !event.isPlaceholder;
     case 'brothers':
       return ['M', 'F', 'A'].includes(event.type);
     case 'sisters':

@@ -20,6 +20,41 @@ export function EventCard({
   showScheduleMark = true,
   isLast = false,
 }: EventCardProps) {
+  if (event.isPlaceholder) {
+    return (
+      <View style={[styles.row, styles.placeholderRow, isLast && styles.lastRow]}>
+        <View style={styles.dateColumn}>
+          <Text style={styles.time}>{event.time || 'TBA'}</Text>
+          <Text style={styles.gregorianDate}>{formatGregorianDate(event.date)}</Text>
+          <Text style={styles.islamicDate}>{event.islamicDate || 'Hijri date pending'}</Text>
+        </View>
+
+        <View style={styles.eventCopy}>
+          <Text style={styles.placeholderLabel}>Time slot held</Text>
+          <Text style={styles.placeholderTitle}>
+            This slot was picked by {event.contactName || 'a community member'}
+          </Text>
+          <Text style={styles.placeholderNote}>
+            Program details will appear after the event is confirmed.
+          </Text>
+        </View>
+
+        {canEdit ? (
+          <View style={styles.actions}>
+            <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
+              <Pressable
+                accessibilityLabel={`Edit placeholder for ${event.contactName || 'community member'}`}
+                style={styles.editButton}
+              >
+                <Pencil color={colors.oxblood} size={17} strokeWidth={2} />
+              </Pressable>
+            </Link>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
   const tone = getEventTone(event);
   const openMaps = () => {
     if (!event.address) return;
@@ -100,6 +135,9 @@ const styles = StyleSheet.create({
   lastRow: {
     borderBottomWidth: 0,
   },
+  placeholderRow: {
+    backgroundColor: colors.ivoryRaised,
+  },
   dateColumn: {
     width: 118,
   },
@@ -126,6 +164,27 @@ const styles = StyleSheet.create({
   eventCopy: {
     flex: 1,
     minWidth: 210,
+  },
+  placeholderLabel: {
+    color: colors.goldDark,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  placeholderTitle: {
+    color: colors.onIvory,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 25,
+    lineHeight: 30,
+    marginTop: spacing.xs,
+  },
+  placeholderNote: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.body,
+    fontSize: typography.small,
+    lineHeight: 20,
+    marginTop: spacing.xs,
   },
   metaRow: {
     alignItems: 'center',

@@ -1,5 +1,6 @@
 export type EventType = 'M' | 'W' | 'F' | 'A' | string;
 export type MajlisStatus = 'Pending' | 'En Route' | 'Started' | 'Completed' | 'Delayed' | 'Skipped';
+export type AnjumanApprovalStatus = 'not_requested' | 'pending' | 'approved' | 'declined';
 
 export type CommunityEvent = {
   id: string;
@@ -17,6 +18,7 @@ export type CommunityEvent = {
   isPublished: boolean;
   waitingApproval: boolean;
   isPlaceholder?: boolean;
+  anjumanApprovalStatus?: AnjumanApprovalStatus;
 };
 
 export type PrayerTime = {

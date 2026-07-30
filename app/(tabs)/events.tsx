@@ -13,12 +13,13 @@ import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 const filters = ['All', 'Anjuman', 'Brothers', 'Sisters', 'Family'] as const;
 const EVENTS_PER_PAGE = 12;
+const scheduleOptions = { includePlaceholders: true };
 type Filter = (typeof filters)[number];
 
 export default function EventsScreen() {
   const [filter, setFilter] = useState<Filter>('All');
   const [filtered, setFiltered] = useState<CommunityEvent[] | null>(
-    () => peekEvents('all') ?? null,
+    () => peekEvents('all', scheduleOptions) ?? null,
   );
   const [visibleCount, setVisibleCount] = useState(EVENTS_PER_PAGE);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -28,8 +29,8 @@ export default function EventsScreen() {
   useEffect(() => {
     let active = true;
     setVisibleCount(EVENTS_PER_PAGE);
-    setFiltered(peekEvents(filter.toLowerCase()) ?? null);
-    fetchEvents(filter.toLowerCase()).then((nextEvents) => {
+    setFiltered(peekEvents(filter.toLowerCase(), scheduleOptions) ?? null);
+    fetchEvents(filter.toLowerCase(), scheduleOptions).then((nextEvents) => {
       if (active) setFiltered(nextEvents);
     });
     return () => {
@@ -51,7 +52,7 @@ export default function EventsScreen() {
           <Text style={styles.headerEyebrow}>Houston community calendar</Text>
           <Text style={styles.headerTitle}>Find the next majlis</Text>
           <Text style={styles.headerText}>
-            Browse approved listings or add a program for the Pasban team to review.
+            Browse community programs, committed Anjuman majalis, and reserved time slots.
           </Text>
         </View>
         <Link href="/connect?intent=event" asChild>
@@ -89,7 +90,7 @@ export default function EventsScreen() {
         {hasMoreEvents ? (
           <View style={styles.loadMoreWrap}>
             <Text style={styles.loadMoreMeta}>
-              Showing {visibleEvents.length} of {filtered.length} upcoming events
+              Showing {visibleEvents.length} of {filtered.length} schedule entries
             </Text>
             <Pressable
               accessibilityLabel="Load more events"

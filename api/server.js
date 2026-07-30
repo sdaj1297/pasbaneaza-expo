@@ -20,6 +20,7 @@ const {
   createMembershipSubmission,
   createVolunteerSubmission,
 } = require('./services/membershipService');
+const { createCommunityEventSubmission } = require('./services/communityEventService');
 const { getDisplayDate, getHoustonDate, HOUSTON_TIME_ZONE } = require('./utils/dates');
 
 const app = express();
@@ -235,11 +236,17 @@ async function handleFormSubmission(req, res, next) {
   try {
     const type = req.params.type || req.body.type;
     const usesFirebaseSignup = process.env.EXPO_PUBLIC_DATA_BACKEND === 'firebase'
-      && (type === 'membership' || type === 'volunteer');
+      && (type === 'event' || type === 'membership' || type === 'volunteer');
     const submission = usesFirebaseSignup
-      ? type === 'membership'
-        ? await createMembershipSubmission(req.body)
-        : await createVolunteerSubmission(req.body)
+      ? type === 'event'
+        ? await createCommunityEventSubmission(req.body, {
+            ip: req.headers['x-nf-client-connection-ip']
+              || req.headers['x-forwarded-for']?.split(',')[0]
+              || req.ip,
+          })
+        : type === 'membership'
+          ? await createMembershipSubmission(req.body)
+          : await createVolunteerSubmission(req.body)
       : await createSubmission({
           ...req.body,
           type,

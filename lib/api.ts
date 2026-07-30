@@ -30,6 +30,7 @@ import {
   fetchIslamicCalendarYearsFromFirebase,
   fetchPrayerTimesFromFirebase,
   fetchTodayMajlisFromFirebase,
+  invalidateFirebaseEventCaches,
   peekCalendarMonthFromFirebase,
   peekEventsFromFirebase,
   peekHomeFromFirebase,
@@ -87,6 +88,7 @@ export type EventQueryOptions = {
   from?: string;
   to?: string;
   approvedOnly?: boolean;
+  includePlaceholders?: boolean;
 };
 
 export type HomePayload = {
@@ -118,6 +120,7 @@ export type PublicSubmissionResult = {
   id: string;
   type: PublicSubmissionType;
   status: 'new' | 'pending_review' | string;
+  eventId?: string;
   notificationSent?: boolean;
   confirmationSent?: boolean;
 };
@@ -328,7 +331,7 @@ export async function updateIslamicMonthLength(year: number, month: number, leng
 }
 
 export async function submitPublicForm(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
-  if (input.type === 'membership' || input.type === 'volunteer') {
+  if (input.type === 'event' || input.type === 'membership' || input.type === 'volunteer') {
     const response = await fetch(`${API_BASE}/forms/${input.type}`, {
       method: 'POST',
       headers: {
@@ -337,9 +340,14 @@ export async function submitPublicForm(input: PublicSubmissionInput): Promise<Pu
       body: JSON.stringify(input),
     });
     if (!response.ok) {
-      throw new Error(`${input.type} submission failed (${response.status}).`);
+      if (input.type === 'event' && response.status >= 500 && isFirebaseBackendEnabled()) {
+        return submitPublicFormToFirebase(input);
+      }
+      const detail = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(detail?.error || `${input.type} submission failed (${response.status}).`);
     }
     const result = await response.json() as { submission: PublicSubmissionResult };
+    if (input.type === 'event') invalidateFirebaseEventCaches();
     return result.submission;
   }
 
@@ -348,7 +356,7 @@ export async function submitPublicForm(input: PublicSubmissionInput): Promise<Pu
   const fallback: PublicSubmissionResult = {
     id: `local-${Date.now()}`,
     type: input.type,
-    status: input.type === 'event' ? 'pending_review' : 'new',
+    status: 'new',
   };
   const result = await sendJson<{ submission: PublicSubmissionResult }>(`/forms/${input.type}`, input, { submission: fallback });
   return result.submission;
