@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect, useState } from 'react';
+import { createElement, PropsWithChildren, useEffect, useState } from 'react';
 import { Href, Link, usePathname } from 'expo-router';
 import {
   CalendarDays,
@@ -91,7 +91,8 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
 
           {Platform.OS === 'web' ? (
             <>
-            <View nativeID="pasban-desktop-nav" style={styles.desktopNav}>
+            <WebVisibility mode="desktop">
+            <View style={styles.desktopNav}>
               {desktopNav.map((item) => {
                 const matchPath = item.matchPath || String(item.href);
                 const active = pathname.startsWith(matchPath);
@@ -116,13 +117,14 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
                 </Pressable>
               </Link>
             </View>
-            <View nativeID="pasban-mobile-account">
+            </WebVisibility>
+            <WebVisibility mode="mobile">
               <Link href={accountHref} asChild>
                 <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
                   <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
                 </Pressable>
               </Link>
-            </View>
+            </WebVisibility>
             </>
           ) : (
               <Link href={accountHref} asChild>
@@ -145,7 +147,8 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
       </ScrollView>
 
       {Platform.OS === 'web' ? (
-        <View nativeID="pasban-mobile-nav" style={styles.mobileNav}>
+        <WebVisibility mode="mobile">
+        <View style={styles.mobileNav}>
           {mobileNav.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(String(item.href));
             const Icon = item.icon;
@@ -165,9 +168,17 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
             );
           })}
         </View>
+        </WebVisibility>
       ) : null}
     </View>
   );
+}
+
+function WebVisibility({
+  children,
+  mode,
+}: PropsWithChildren<{ mode: 'desktop' | 'mobile' }>) {
+  return createElement('div', { className: `pasban-${mode}-only` }, children);
 }
 
 const styles = StyleSheet.create({

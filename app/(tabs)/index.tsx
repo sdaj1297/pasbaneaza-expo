@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link, Stack } from 'expo-router';
 import {
   ArrowRight,
@@ -462,18 +462,24 @@ function FeaturedFlyer({
     >
       {Platform.OS === 'web' && landscapeFlyerUrl ? (
         <>
-          <Image
-            nativeID="pasban-flyer-portrait"
-            resizeMode="contain"
-            source={{ uri: event.flyerUrl }}
-            style={[styles.flyerPoster, styles.flyerPosterPortrait]}
-          />
-          <Image
-            nativeID="pasban-flyer-landscape"
-            resizeMode="contain"
-            source={{ uri: landscapeFlyerUrl }}
-            style={[styles.flyerPoster, styles.flyerPosterLandscape]}
-          />
+          {createElement(
+            'div',
+            { className: 'pasban-flyer-portrait' },
+            <Image
+              resizeMode="contain"
+              source={{ uri: event.flyerUrl }}
+              style={[styles.flyerPoster, styles.flyerPosterPortrait]}
+            />,
+          )}
+          {createElement(
+            'div',
+            { className: 'pasban-flyer-landscape' },
+            <Image
+              resizeMode="contain"
+              source={{ uri: landscapeFlyerUrl }}
+              style={[styles.flyerPoster, styles.flyerPosterLandscape]}
+            />,
+          )}
         </>
       ) : (
         <Image
