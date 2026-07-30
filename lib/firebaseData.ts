@@ -460,20 +460,26 @@ export async function fetchAdminEventsFromFirebase(): Promise<CommunityEvent[]> 
 
   try {
     const db = getFirebaseDb();
-    const [mirrorSnapshot, effectiveSnapshot] = await Promise.all([
+    const [mirrorResult, effectiveResult] = await Promise.allSettled([
       getDocs(query(collection(db, 'prodMirrorEvents'), orderBy('date'), limit(MAX_EVENT_READS))),
       getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS))),
     ]);
+    if (mirrorResult.status === 'rejected' && effectiveResult.status === 'rejected') {
+      throw effectiveResult.reason;
+    }
+
+    const mirrorDocs = mirrorResult.status === 'fulfilled' ? mirrorResult.value.docs : [];
+    const effectiveDocs = effectiveResult.status === 'fulfilled' ? effectiveResult.value.docs : [];
     const today = getHoustonDate();
-    const effectiveById = new Map(effectiveSnapshot.docs.map((eventDoc) => [
+    const effectiveById = new Map(effectiveDocs.map((eventDoc) => [
       eventDoc.id,
       normalizeEvent(eventDoc.id, eventDoc.data()),
     ]));
-    const mirrorEvents = mirrorSnapshot.docs.map((eventDoc) => (
+    const mirrorEvents = mirrorDocs.map((eventDoc) => (
       effectiveById.get(eventDoc.id) || normalizeEvent(eventDoc.id, eventDoc.data())
     ));
-    const mirrorIds = new Set(mirrorSnapshot.docs.map((eventDoc) => eventDoc.id));
-    const betaEvents = effectiveSnapshot.docs
+    const mirrorIds = new Set(mirrorDocs.map((eventDoc) => eventDoc.id));
+    const betaEvents = effectiveDocs
       .filter((eventDoc) => !mirrorIds.has(eventDoc.id))
       .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()));
 
@@ -493,12 +499,13 @@ export async function fetchAdminEventFromFirebase(eventId: string): Promise<Comm
 
   try {
     const db = getFirebaseDb();
-    const [effectiveSnapshot, mirrorSnapshot] = await Promise.all([
-      getDoc(doc(db, 'events', eventId)),
-      getDoc(doc(db, 'prodMirrorEvents', eventId)),
-    ]);
-    const snapshot = effectiveSnapshot.exists() ? effectiveSnapshot : mirrorSnapshot;
-    return snapshot.exists() ? normalizeEvent(snapshot.id, snapshot.data()) : null;
+    const effectiveSnapshot = await getDoc(doc(db, 'events', eventId));
+    if (effectiveSnapshot.exists()) {
+      return normalizeEvent(effectiveSnapshot.id, effectiveSnapshot.data());
+    }
+
+    const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorEvents', eventId));
+    return mirrorSnapshot.exists() ? normalizeEvent(mirrorSnapshot.id, mirrorSnapshot.data()) : null;
   } catch (error) {
     console.warn('Unable to load admin event from Firestore.', error);
     return null;
@@ -587,16 +594,19 @@ export async function deleteAdminEventInFirebase(eventId: string, eventDate: str
 
   const db = getFirebaseDb();
   const mirrorRef = doc(db, 'prodMirrorEvents', eventId);
-  const mirrorSnapshot = await getDoc(mirrorRef);
-
-  if (mirrorSnapshot.exists()) {
-    await setDoc(doc(db, 'betaEventOverrides', eventId), {
-      kind: 'delete',
-      baseHash: String(mirrorSnapshot.data().sourceHash || ''),
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    await deleteDoc(doc(db, 'betaEventOverrides', eventId));
+  try {
+    const mirrorSnapshot = await getDoc(mirrorRef);
+    if (mirrorSnapshot.exists()) {
+      await setDoc(doc(db, 'betaEventOverrides', eventId), {
+        kind: 'delete',
+        baseHash: String(mirrorSnapshot.data().sourceHash || ''),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await deleteDoc(doc(db, 'betaEventOverrides', eventId));
+    }
+  } catch (error) {
+    console.warn('Unable to update the optional production override record.', error);
   }
 
   await deleteDoc(doc(db, 'events', eventId));
@@ -607,14 +617,17 @@ export async function deleteAdminEventInFirebase(eventId: string, eventDate: str
 async function writeEvent(event: CommunityEvent, originalDate?: string): Promise<void> {
   const db = getFirebaseDb();
   const eventPayload = serializeEvent(event);
-  const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorEvents', event.id));
-
-  await setDoc(doc(db, 'betaEventOverrides', event.id), {
-    kind: mirrorSnapshot.exists() ? 'update' : 'created',
-    baseHash: mirrorSnapshot.exists() ? String(mirrorSnapshot.data().sourceHash || '') : '',
-    event: eventPayload,
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
+  try {
+    const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorEvents', event.id));
+    await setDoc(doc(db, 'betaEventOverrides', event.id), {
+      kind: mirrorSnapshot.exists() ? 'update' : 'created',
+      baseHash: mirrorSnapshot.exists() ? String(mirrorSnapshot.data().sourceHash || '') : '',
+      event: eventPayload,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.warn('Unable to update the optional production override record.', error);
+  }
 
   await setDoc(doc(db, 'events', event.id), eventPayload, { merge: true });
   await setDoc(doc(db, 'eventDays', event.date), {
