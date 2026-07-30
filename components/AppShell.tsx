@@ -83,8 +83,15 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
                 />
               </View>
               <View style={styles.brandCopy}>
-                <Text style={styles.brandTitle}>Pasban-e-Aza</Text>
-                <Text style={styles.brandSubtitle}>Anjuman · Houston</Text>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                  numberOfLines={1}
+                  style={styles.brandTitle}
+                >
+                  Anjuman Pasban-e-Aza
+                </Text>
+                <Text style={styles.brandSubtitle}>Houston</Text>
               </View>
             </Pressable>
           </Link>
@@ -230,6 +237,7 @@ const styles = StyleSheet.create({
     width: 54,
   },
   brandCopy: {
+    flexShrink: 1,
     gap: 1,
   },
   brandTitle: {
