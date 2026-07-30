@@ -17,6 +17,40 @@ export default function Root({ children }: { children: ReactNode }) {
           name="description"
           content="Houston majlis schedule, Anjuman committed programs, community events, prayer times, and Pasban-e-Aza updates."
         />
+        <link rel="canonical" href="https://www.pasbaneaza.org/" />
+        <link rel="apple-touch-icon" href="https://www.pasbaneaza.org/social-preview.png" />
+        <meta name="theme-color" content="#090807" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Anjuman Pasban-e-Aza" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:url" content="https://www.pasbaneaza.org/" />
+        <meta property="og:title" content="Anjuman Pasban-e-Aza" />
+        <meta
+          property="og:description"
+          content="Houston majlis schedule, community events, live majlis status, prayer times, and Pasban-e-Aza announcements."
+        />
+        <meta
+          property="og:image"
+          content="https://www.pasbaneaza.org/social-preview.png"
+        />
+        <meta property="og:image:secure_url" content="https://www.pasbaneaza.org/social-preview.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="Anjuman Pasban-e-Aza logo" />
+
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Anjuman Pasban-e-Aza" />
+        <meta
+          name="twitter:description"
+          content="Houston majlis schedule, community events, live majlis status, prayer times, and Pasban-e-Aza announcements."
+        />
+        <meta
+          name="twitter:image"
+          content="https://www.pasbaneaza.org/social-preview.png"
+        />
+        <meta name="twitter:image:alt" content="Anjuman Pasban-e-Aza logo" />
 
         {/*
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
