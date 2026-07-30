@@ -37,6 +37,7 @@ export type SpecialEvent = {
   dateLabel: string;
   description: string;
   flyerUrl?: string;
+  landscapeFlyerUrl?: string;
   liveStreamUrl?: string;
   isActive: boolean;
 };
@@ -191,7 +192,7 @@ export const prayerTimes: PrayerTime[] = [
   { label: 'Sunrise', time: '6:24 AM' },
   { label: 'Zohr', time: '1:25 PM' },
   { label: 'Sunset', time: '8:26 PM' },
-  { label: 'Magrib', time: '8:43 PM' },
+  { label: 'Maghrib', time: '8:43 PM' },
 ];
 
 export const statusItems: StatusItem[] = events

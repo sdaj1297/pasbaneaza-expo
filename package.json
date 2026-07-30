@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo-google-fonts/newsreader": "^0.4.1",
+    "adhan": "^4.4.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "expo": "~56.0.12",

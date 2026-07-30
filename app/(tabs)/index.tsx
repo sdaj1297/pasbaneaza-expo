@@ -13,6 +13,7 @@ import {
 import {
   Image,
   Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -31,7 +32,7 @@ import {
   SpecialEvent,
   StatusItem,
 } from '@/data/mock';
-import { useResponsiveHeight, useResponsiveWidth } from '@/hooks/useResponsiveWidth';
+import { useResponsiveWidth } from '@/hooks/useResponsiveWidth';
 import {
   fetchEvents,
   fetchHome,
@@ -58,7 +59,6 @@ const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eve
 
 export default function HomeScreen() {
   const width = useResponsiveWidth();
-  const height = useResponsiveHeight();
   const compact = width < 820;
   const [audience, setAudience] = useState<HomeScheduleFilter>('anjuman');
   const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(
@@ -171,7 +171,7 @@ export default function HomeScreen() {
         ) : null}
 
         {hasRealFlyer ? (
-          <FeaturedFlyer event={featured} viewportHeight={height} viewportWidth={width} />
+          <FeaturedFlyer event={featured} viewportWidth={width} />
         ) : null}
 
         <View style={[styles.todayHero, compact && styles.compactHero]}>
@@ -447,30 +447,54 @@ function PrayerPreview({ times }: { times: PrayerTime[] }) {
 
 function FeaturedFlyer({
   event,
-  viewportHeight,
   viewportWidth,
 }: {
   event: SpecialEvent;
-  viewportHeight: number;
   viewportWidth: number;
 }) {
   const compact = viewportWidth < 700;
-  const mobileWidth = Math.max(viewportWidth - 42, 0);
-  const desktopHeight = Math.min(820, Math.max(viewportHeight - 104, 520));
-  const posterHeight = compact ? Math.min((mobileWidth * 16) / 9, 760) : desktopHeight;
+  const landscapeFlyerUrl = event.landscapeFlyerUrl;
 
   return (
     <View
       accessibilityLabel={`${event.title}. ${event.dateLabel}. ${event.description}`}
       style={[styles.flyerStage, compact && styles.compactFlyerStage]}
     >
-      <Image
-        resizeMode="contain"
-        source={{ uri: event.flyerUrl }}
-        style={[styles.flyerPoster, { height: posterHeight }]}
-      />
+      {Platform.OS === 'web' && landscapeFlyerUrl ? (
+        <>
+          <Image
+            {...webClassName('pasban-flyer-portrait')}
+            resizeMode="contain"
+            source={{ uri: event.flyerUrl }}
+            style={[styles.flyerPoster, styles.flyerPosterPortrait]}
+          />
+          <Image
+            {...webClassName('pasban-flyer-landscape')}
+            resizeMode="contain"
+            source={{ uri: landscapeFlyerUrl }}
+            style={[styles.flyerPoster, styles.flyerPosterLandscape]}
+          />
+        </>
+      ) : (
+        <Image
+          resizeMode="contain"
+          source={{
+            uri: landscapeFlyerUrl && !compact ? landscapeFlyerUrl : event.flyerUrl,
+          }}
+          style={[
+            styles.flyerPoster,
+            landscapeFlyerUrl && !compact
+              ? styles.flyerPosterLandscape
+              : styles.flyerPosterPortrait,
+          ]}
+        />
+      )}
     </View>
   );
+}
+
+function webClassName(className: string) {
+  return Platform.OS === 'web' ? ({ className } as Record<string, string>) : {};
 }
 
 function FeaturedNotice({ event }: { event: SpecialEvent }) {
@@ -920,8 +944,14 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   flyerPoster: {
-    aspectRatio: 9 / 16,
     maxWidth: '100%',
+    width: '100%',
+  },
+  flyerPosterPortrait: {
+    aspectRatio: 9 / 16,
+  },
+  flyerPosterLandscape: {
+    aspectRatio: 16 / 9,
   },
   featuredNotice: {
     backgroundColor: colors.oxblood,

@@ -11,6 +11,9 @@ Run `npm run db:migrate` before using write endpoints. Run `npm run verify:api` 
 - All "today" endpoints use Houston time: `America/Chicago`.
 - Dates use `YYYY-MM-DD`.
 - IDs are returned as strings to avoid frontend number/string drift.
+- Web and native clients calculate Houston prayer times locally with the
+  legacy Jafari parameters (Fajr 16 degrees, Maghrib 4 degrees, Isha 14
+  degrees). Firestore is not required for prayer-time data.
 
 ## Health
 

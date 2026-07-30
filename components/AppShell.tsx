@@ -89,8 +89,9 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
             </Pressable>
           </Link>
 
-          {Platform.OS === 'web' && !isCompactWeb ? (
-            <View style={styles.desktopNav}>
+          {Platform.OS === 'web' ? (
+            <>
+            <View {...webClassName('pasban-desktop-only')} style={styles.desktopNav}>
               {desktopNav.map((item) => {
                 const matchPath = item.matchPath || String(item.href);
                 const active = pathname.startsWith(matchPath);
@@ -115,12 +116,20 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
                 </Pressable>
               </Link>
             </View>
+            <View {...webClassName('pasban-mobile-only')}>
+              <Link href={accountHref} asChild>
+                <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
+                  <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
+                </Pressable>
+              </Link>
+            </View>
+            </>
           ) : (
-            <Link href={accountHref} asChild>
-              <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
-                <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
-              </Pressable>
-            </Link>
+              <Link href={accountHref} asChild>
+                <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
+                  <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
+                </Pressable>
+              </Link>
           )}
         </View>
 
@@ -135,8 +144,8 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
         {children}
       </ScrollView>
 
-      {isCompactWeb ? (
-        <View style={styles.mobileNav}>
+      {Platform.OS === 'web' ? (
+        <View {...webClassName('pasban-mobile-only')} style={styles.mobileNav}>
           {mobileNav.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(String(item.href));
             const Icon = item.icon;
@@ -159,6 +168,10 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
       ) : null}
     </View>
   );
+}
+
+function webClassName(className: string) {
+  return Platform.OS === 'web' ? ({ className } as Record<string, string>) : {};
 }
 
 const styles = StyleSheet.create({

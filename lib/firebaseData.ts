@@ -22,7 +22,6 @@ import {
   islamicCalendarYears as fallbackIslamicCalendarYears,
   islamicEvents as fallbackIslamicEvents,
   MajlisStatus,
-  prayerTimes as fallbackPrayerTimes,
   PrayerTime,
   specialEvent as fallbackSpecialEvent,
   SpecialEvent,
@@ -57,6 +56,7 @@ import {
   peekCached,
   setCached,
 } from '@/lib/dataCache';
+import { getHoustonPrayerTimes } from '@/lib/prayerTimes';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
@@ -194,7 +194,7 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
       announcements: Array.isArray(home.announcements) ? home.announcements : [],
       featuredAnnouncement: null,
       sayings: Array.isArray(home.sayings) ? home.sayings : [],
-      prayerTimes: normalizePrayerTimes(home.prayerTimes),
+      prayerTimes: getHoustonPrayerTimes(today),
       upcomingEvents,
       specialEvent: activeBanner || EMPTY_SPECIAL_EVENT,
     };
@@ -393,19 +393,8 @@ export async function updateIslamicMonthLengthInFirebase(
 }
 
 export async function fetchPrayerTimesFromFirebase(): Promise<PrayerTime[]> {
-  if (!isFirebaseBackendEnabled()) return fallbackPrayerTimes;
-
-  try {
-    return await loadCached(PRAYER_CACHE_KEY, async () => {
-    const db = getFirebaseDb();
-    const snapshot = await getDoc(doc(db, 'settings', 'prayerTimes'));
-    const data = snapshot.exists() ? snapshot.data() : {};
-    return normalizePrayerTimes(data.times);
-    }, CONTENT_TTL_MS);
-  } catch (error) {
-    console.warn('Unable to load prayer times from Firestore.', error);
-    return [];
-  }
+  const today = getHoustonDate();
+  return loadCached(PRAYER_CACHE_KEY, async () => getHoustonPrayerTimes(today), CONTENT_TTL_MS);
 }
 
 export async function submitPublicFormToFirebase(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
@@ -631,7 +620,7 @@ export function peekTodayMajlisFromFirebase(): StatusItem[] | undefined {
 }
 
 export function peekPrayerTimesFromFirebase(): PrayerTime[] | undefined {
-  return peekCached(PRAYER_CACHE_KEY);
+  return peekCached(PRAYER_CACHE_KEY) || getHoustonPrayerTimes();
 }
 
 export async function preloadPrimaryFirebaseData(): Promise<void> {
@@ -683,7 +672,7 @@ function fallbackHome(): HomePayload & { specialEvent: SpecialEvent } {
     announcements: [],
     featuredAnnouncement: null,
     sayings: [],
-    prayerTimes: fallbackPrayerTimes,
+    prayerTimes: getHoustonPrayerTimes(today),
     upcomingEvents: fallbackEvents,
     specialEvent: fallbackSpecialEvent,
   };
@@ -700,7 +689,7 @@ function emptyHome(): HomePayload & { specialEvent: SpecialEvent } {
     announcements: [],
     featuredAnnouncement: null,
     sayings: [],
-    prayerTimes: [],
+    prayerTimes: getHoustonPrayerTimes(today),
     upcomingEvents: [],
     specialEvent: EMPTY_SPECIAL_EVENT,
   };
@@ -826,21 +815,10 @@ function normalizeBanner(id: string, data: DocumentData, today: string): Special
     dateLabel: String(data.dateLabel || ''),
     description: String(data.description || data.body || ''),
     flyerUrl: stringOrUndefined(data.flyerUrl || data.imageUrl),
+    landscapeFlyerUrl: stringOrUndefined(data.landscapeFlyerUrl || data.landscapeImageUrl),
     liveStreamUrl: stringOrUndefined(data.liveStreamUrl || data.youtubeEmbedUrl),
     isActive: Boolean(data.isActive ?? data.active) && isWithinWindow,
   };
-}
-
-function normalizePrayerTimes(value: unknown): PrayerTime[] {
-  if (!Array.isArray(value)) return [];
-  const times = value
-    .map((item) => ({
-      label: String(item?.label || ''),
-      time: String(item?.time || ''),
-    }))
-    .filter((item) => item.label && item.time);
-
-  return times;
 }
 
 function isPublicEvent(event: CommunityEvent, _approvedOnly = false) {

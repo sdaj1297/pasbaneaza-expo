@@ -68,7 +68,7 @@ function iconForPrayer(label: string) {
   if (label === 'Fajr') return Moon;
   if (label === 'Sunrise') return Sunrise;
   if (label === 'Sunset') return Sunset;
-  if (label === 'Magrib') return Moon;
+  if (label === 'Maghrib') return Moon;
   return Sun;
 }
 

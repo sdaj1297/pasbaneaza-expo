@@ -40,7 +40,6 @@ banners/{bannerId}
 islamicCalendar/{lunarYear}
 islamicEvents/{eventId}
 settings/home
-settings/prayerTimes
 submissions/{submissionId}
 ```
 
@@ -51,6 +50,13 @@ submissions/{submissionId}
 `majlisStatus/{date}/events/{eventId}` is community writable for now and can later be protected by Firebase Auth.
 
 `banners` controls homepage flyer/special event mode.
+Banner documents may provide both `flyerUrl` (portrait) and
+`landscapeFlyerUrl` (landscape). The app chooses the matching asset without
+recompressing either file.
+
+Prayer times are calculated in the app for Houston using the Jafari method
+(Fajr 16 degrees, Maghrib 4 degrees, Isha 14 degrees), matching the legacy
+PHP implementation. They are not stored in Firestore.
 
 `islamicCalendar/{lunarYear}` contains migrated `ISLAMIC_CALENDAR` data: each document has `year`, `firstDate`, and twelve month length rows. The admin page can update month lengths to 29 or 30 days.
 
