@@ -6,7 +6,7 @@ const {
   serverTimestamp,
 } = require('firebase/firestore');
 
-const FIREBASE_APP_NAME = 'membership-submissions';
+const FIREBASE_APP_NAME = 'community-signup-submissions';
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const SITE_URL = 'https://www.pasbaneaza.org';
 const WHATSAPP_ANNOUNCEMENTS_URL = 'https://chat.whatsapp.com/I0PxdtZt9x1Bg3QN9btF9M?s=cl&p=i&ilr=4&amv=0';
@@ -54,12 +54,11 @@ function getMembershipDb() {
   return getFirestore(app);
 }
 
-async function sendEmail({ to, subject, text, html, idempotencyKey }) {
+async function sendEmail({ to, subject, text, html, idempotencyKey, from, replyTo }) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.MEMBERSHIP_FROM_EMAIL;
 
   if (!apiKey || !from) {
-    throw new Error('Membership email delivery is not configured.');
+    throw new Error('Community signup email delivery is not configured.');
   }
 
   const response = await fetch(RESEND_ENDPOINT, {
@@ -75,7 +74,7 @@ async function sendEmail({ to, subject, text, html, idempotencyKey }) {
       subject,
       text,
       html,
-      reply_to: process.env.MEMBERSHIP_REPLY_TO_EMAIL || undefined,
+      reply_to: replyTo || undefined,
     }),
   });
 
@@ -86,35 +85,49 @@ async function sendEmail({ to, subject, text, html, idempotencyKey }) {
 }
 
 async function createMembershipSubmission(input) {
+  return createCommunitySignupSubmission(input, 'membership');
+}
+
+async function createVolunteerSubmission(input) {
+  return createCommunitySignupSubmission(input, 'volunteer');
+}
+
+async function createCommunitySignupSubmission(input, type) {
+  const config = getSignupConfig(type);
   const submission = normalizeMembershipInput(input);
   const db = getMembershipDb();
   const docRef = await addDoc(collection(db, 'submissions'), {
-    type: 'membership',
+    type,
     ...submission,
-    payload: { interestType: 'membership' },
+    payload: { interestType: type },
     source: 'website',
     status: 'new',
     createdAt: serverTimestamp(),
   });
 
-  const adminRecipient = process.env.MEMBERSHIP_NOTIFICATION_EMAIL;
+  const adminRecipient = process.env[config.notificationEnv]
+    || process.env.MEMBERSHIP_NOTIFICATION_EMAIL;
+  const from = process.env[config.fromEnv]
+    || process.env.MEMBERSHIP_FROM_EMAIL;
+  const replyTo = process.env[config.replyToEnv]
+    || process.env.MEMBERSHIP_REPLY_TO_EMAIL;
   const applicantLabel = submission.name || submission.email || submission.phone || 'New applicant';
   const detailsText = [
     `Name: ${submission.name || 'Not provided'}`,
     `Email: ${submission.email || 'Not provided'}`,
     `Phone: ${submission.phone || 'Not provided'}`,
     '',
-    'Membership details:',
+    `${config.detailsLabel}:`,
     submission.message || 'Not provided',
     '',
     `Submission ID: ${docRef.id}`,
   ].join('\n');
   const detailsHtml = `
-    <h2>New Pasban-e-Aza membership request</h2>
+    <h2>New Pasban-e-Aza ${escapeHtml(config.requestLabel)}</h2>
     <p><strong>Name:</strong> ${escapeHtml(submission.name || 'Not provided')}</p>
     <p><strong>Email:</strong> ${escapeHtml(submission.email || 'Not provided')}</p>
     <p><strong>Phone:</strong> ${escapeHtml(submission.phone || 'Not provided')}</p>
-    <p><strong>Membership details:</strong><br>${escapeHtml(submission.message || 'Not provided').replace(/\n/g, '<br>')}</p>
+    <p><strong>${escapeHtml(config.detailsLabel)}:</strong><br>${escapeHtml(submission.message || 'Not provided').replace(/\n/g, '<br>')}</p>
     <p style="color:#666">Submission ID: ${escapeHtml(docRef.id)}</p>
   `;
 
@@ -126,21 +139,25 @@ async function createMembershipSubmission(input) {
   const adminEmail = adminRecipient
     ? sendEmail({
         to: adminRecipient,
-        subject: `New membership request: ${applicantLabel}`,
+        subject: `New ${config.requestLabel}: ${applicantLabel}`,
         text: detailsText,
         html: detailsHtml,
-        idempotencyKey: `membership-admin-${docRef.id}`,
+        idempotencyKey: `${type}-admin-${docRef.id}`,
+        from,
+        replyTo,
       }).then(() => {
         delivery.notificationSent = true;
       })
-    : Promise.reject(new Error('MEMBERSHIP_NOTIFICATION_EMAIL is not configured.'));
+    : Promise.reject(new Error(`${config.notificationEnv} is not configured.`));
 
   const confirmationEmail = submission.email
     ? sendEmail({
         to: submission.email,
-        subject: 'Your Pasban-e-Aza membership request was received',
-        ...buildMembershipConfirmationEmail(submission),
-        idempotencyKey: `membership-confirmation-${docRef.id}`,
+        subject: config.confirmationSubject,
+        ...buildSignupConfirmationEmail(submission, config),
+        idempotencyKey: `${type}-confirmation-${docRef.id}`,
+        from,
+        replyTo,
       }).then(() => {
         delivery.confirmationSent = true;
       })
@@ -149,19 +166,27 @@ async function createMembershipSubmission(input) {
   const emailResults = await Promise.allSettled([adminEmail, confirmationEmail]);
   emailResults.forEach((result) => {
     if (result.status === 'rejected') {
-      console.error('Membership email delivery failed.', result.reason);
+      console.error(`${config.requestLabel} email delivery failed.`, result.reason);
     }
   });
 
   return {
     id: docRef.id,
-    type: 'membership',
+    type,
     status: 'new',
     ...delivery,
   };
 }
 
 function buildMembershipConfirmationEmail(submission) {
+  return buildSignupConfirmationEmail(submission, getSignupConfig('membership'));
+}
+
+function buildVolunteerConfirmationEmail(submission) {
+  return buildSignupConfirmationEmail(submission, getSignupConfig('volunteer'));
+}
+
+function buildSignupConfirmationEmail(submission, config) {
   const greeting = submission.name
     ? `Salaam ${submission.name},`
     : 'Salaam,';
@@ -171,8 +196,8 @@ function buildMembershipConfirmationEmail(submission) {
     text: [
       greeting,
       '',
-      'Thank you for your interest in becoming a member of Anjuman Pasban-e-Aza.',
-      'We have received your information. A member of the Pasban team will review it and follow up with you.',
+      config.intro,
+      config.followUp,
       '',
       'Join the Pasban announcements group on WhatsApp:',
       WHATSAPP_ANNOUNCEMENTS_URL,
@@ -201,7 +226,7 @@ function buildMembershipConfirmationEmail(submission) {
   </head>
   <body style="margin:0; padding:0; background-color:#080706; color:#1b1714;">
     <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
-      Your membership request has been received by Anjuman Pasban-e-Aza.
+      Your ${config.requestLabel} has been received by Anjuman Pasban-e-Aza.
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; background-color:#080706;">
       <tr>
@@ -227,13 +252,13 @@ function buildMembershipConfirmationEmail(submission) {
             </tr>
             <tr>
               <td class="email-pad" style="padding:42px 44px 18px;">
-                <div style="font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; color:#971b2d; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase;">Membership request received</div>
+                <div style="font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; color:#971b2d; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase;">${escapeHtml(config.eyebrow)}</div>
                 <h1 class="headline" style="margin:10px 0 22px; font-family:Georgia, 'Times New Roman', serif; font-size:39px; line-height:44px; color:#171310; font-weight:normal;">${escapedGreeting}</h1>
                 <p style="margin:0 0 14px; font-family:Arial, Helvetica, sans-serif; font-size:17px; line-height:27px; color:#4e4640;">
-                  Thank you for your interest in becoming a member of Anjuman Pasban-e-Aza.
+                  ${escapeHtml(config.intro)}
                 </p>
                 <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:17px; line-height:27px; color:#4e4640;">
-                  We have received your information. A member of the Pasban team will review it and follow up with you.
+                  ${escapeHtml(config.followUp)}
                 </p>
               </td>
             </tr>
@@ -244,7 +269,7 @@ function buildMembershipConfirmationEmail(submission) {
                     <td width="4" style="width:4px; background-color:#c3a251;">&nbsp;</td>
                     <td style="padding:14px 18px; background-color:#e9e1d3;">
                       <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:17px; color:#8f1d2e; font-weight:bold; letter-spacing:1px; text-transform:uppercase;">What happens next</div>
-                      <div style="margin-top:4px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:23px; color:#514840;">No further action is required. The Pasban team will contact you using the information you provided.</div>
+                      <div style="margin-top:4px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:23px; color:#514840;">${escapeHtml(config.nextStep)}</div>
                     </td>
                   </tr>
                 </table>
@@ -268,7 +293,7 @@ function buildMembershipConfirmationEmail(submission) {
             <tr>
               <td class="email-pad" style="padding:22px 44px; background-color:#100d0b; border-top:1px solid #332923;">
                 <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:19px; color:#b8ada4;">Anjuman Pasban-e-Aza &middot; Houston, Texas</div>
-                <div style="margin-top:4px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:17px; color:#7f746c;">You received this email because a membership request was submitted using this address.</div>
+                <div style="margin-top:4px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:17px; color:#7f746c;">You received this email because a ${escapeHtml(config.requestLabel)} was submitted using this address.</div>
               </td>
             </tr>
           </table>
@@ -277,6 +302,36 @@ function buildMembershipConfirmationEmail(submission) {
     </table>
   </body>
 </html>`,
+  };
+}
+
+function getSignupConfig(type) {
+  if (type === 'volunteer') {
+    return {
+      confirmationSubject: 'Your Pasban-e-Aza volunteer interest was received',
+      detailsLabel: 'How they would like to help',
+      eyebrow: 'Volunteer interest received',
+      followUp: 'We have received your information. A member of the Pasban team will review it and follow up with you.',
+      fromEnv: 'VOLUNTEER_FROM_EMAIL',
+      intro: 'Thank you for offering your time and skills to support Anjuman Pasban-e-Aza.',
+      nextStep: 'No further action is required. The Pasban team will contact you to discuss where your interests can be most helpful.',
+      notificationEnv: 'VOLUNTEER_NOTIFICATION_EMAIL',
+      replyToEnv: 'VOLUNTEER_REPLY_TO_EMAIL',
+      requestLabel: 'volunteer signup',
+    };
+  }
+
+  return {
+    confirmationSubject: 'Your Pasban-e-Aza membership request was received',
+    detailsLabel: 'Membership details',
+    eyebrow: 'Membership request received',
+    followUp: 'We have received your information. A member of the Pasban team will review it and follow up with you.',
+    fromEnv: 'MEMBERSHIP_FROM_EMAIL',
+    intro: 'Thank you for your interest in becoming a member of Anjuman Pasban-e-Aza.',
+    nextStep: 'No further action is required. The Pasban team will contact you using the information you provided.',
+    notificationEnv: 'MEMBERSHIP_NOTIFICATION_EMAIL',
+    replyToEnv: 'MEMBERSHIP_REPLY_TO_EMAIL',
+    requestLabel: 'membership request',
   };
 }
 
@@ -291,6 +346,8 @@ function escapeHtml(value) {
 
 module.exports = {
   buildMembershipConfirmationEmail,
+  buildVolunteerConfirmationEmail,
   createMembershipSubmission,
+  createVolunteerSubmission,
   normalizeMembershipInput,
 };

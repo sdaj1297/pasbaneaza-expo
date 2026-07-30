@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   Camera,
+  HandHeart,
   MapPin,
   Play,
   Radio,
@@ -188,13 +189,22 @@ export default function HomeScreen() {
               <CalendarDays color={colors.gold} size={17} strokeWidth={1.8} />
               <Text style={styles.hijriDate}>{currentIslamicLabel}</Text>
             </View>
-            <Link href="/connect?intent=membership" asChild>
-              <Pressable accessibilityLabel="Become a Member" style={styles.membershipButton}>
-                <Users color={colors.onIvory} size={17} strokeWidth={2} />
-                <Text style={styles.membershipButtonText}>Become a Member</Text>
-                <ArrowRight color={colors.goldDark} size={17} strokeWidth={2.2} />
-              </Pressable>
-            </Link>
+            <View style={styles.heroActions}>
+              <Link href="/connect?intent=membership" asChild>
+                <Pressable accessibilityLabel="Become a Member" style={styles.membershipButton}>
+                  <Users color={colors.onIvory} size={17} strokeWidth={2} />
+                  <Text style={styles.membershipButtonText}>Become a Member</Text>
+                  <ArrowRight color={colors.goldDark} size={17} strokeWidth={2.2} />
+                </Pressable>
+              </Link>
+              <Link href="/connect?intent=volunteer" asChild>
+                <Pressable accessibilityLabel="Volunteer" style={styles.volunteerButton}>
+                  <HandHeart color={colors.gold} size={17} strokeWidth={2} />
+                  <Text style={styles.volunteerButtonText}>Volunteer</Text>
+                  <ArrowRight color={colors.gold} size={17} strokeWidth={2.2} />
+                </Pressable>
+              </Link>
+            </View>
           </View>
 
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
@@ -533,7 +543,7 @@ function CommunityLinks() {
             <Text style={styles.communityActionText}>Announcements</Text>
           </Pressable>
         </Link>
-        <Link href="/connect" asChild>
+        <Link href="/connect?intent=volunteer" asChild>
           <Pressable style={styles.communityAction}>
             <Users color={colors.muted} size={18} strokeWidth={1.8} />
             <Text style={styles.communityActionText}>Volunteer</Text>
@@ -629,6 +639,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: typography.body,
   },
+  heroActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
   membershipButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -636,7 +653,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     flexDirection: 'row',
     gap: spacing.xs,
-    marginTop: spacing.md,
     minHeight: 42,
     paddingHorizontal: spacing.md,
   },
@@ -954,6 +970,21 @@ const styles = StyleSheet.create({
   flyerPoster: {
     maxWidth: '100%',
     width: '100%',
+  },
+  volunteerButton: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+  },
+  volunteerButtonText: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   flyerPosterPortrait: {
     aspectRatio: 9 / 16,

@@ -328,8 +328,8 @@ export async function updateIslamicMonthLength(year: number, month: number, leng
 }
 
 export async function submitPublicForm(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
-  if (input.type === 'membership') {
-    const response = await fetch(`${API_BASE}/forms/membership`, {
+  if (input.type === 'membership' || input.type === 'volunteer') {
+    const response = await fetch(`${API_BASE}/forms/${input.type}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -337,7 +337,7 @@ export async function submitPublicForm(input: PublicSubmissionInput): Promise<Pu
       body: JSON.stringify(input),
     });
     if (!response.ok) {
-      throw new Error(`Membership submission failed (${response.status}).`);
+      throw new Error(`${input.type} submission failed (${response.status}).`);
     }
     const result = await response.json() as { submission: PublicSubmissionResult };
     return result.submission;

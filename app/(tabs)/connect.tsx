@@ -238,10 +238,10 @@ export default function ConnectScreen() {
         setNotice(
           result.status === 'pending_review'
             ? 'Event submitted for review. It will appear publicly after approval.'
-            : selectedType === 'membership' && result.notificationSent === false
-              ? 'Your membership request was saved, but the team notification could not be sent. Please contact Pasban if you do not hear from us.'
-              : selectedType === 'membership' && result.confirmationSent === false && form.email
-                ? 'Your membership request was received. The team was notified, but we could not send your confirmation email.'
+            : (selectedType === 'membership' || selectedType === 'volunteer') && result.notificationSent === false
+              ? `Your ${selectedType === 'membership' ? 'membership request' : 'volunteer signup'} was saved, but the team notification could not be sent. Please contact Pasban if you do not hear from us.`
+              : (selectedType === 'membership' || selectedType === 'volunteer') && result.confirmationSent === false && form.email
+                ? `Your ${selectedType === 'membership' ? 'membership request' : 'volunteer signup'} was received. The team was notified, but we could not send your confirmation email.`
                 : 'Submission received. Thank you.',
         );
       }
