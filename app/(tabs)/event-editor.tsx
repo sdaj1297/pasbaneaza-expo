@@ -100,7 +100,7 @@ export default function EventEditorScreen() {
     if (!event || saving) return;
 
     if (Platform.OS === 'web') {
-      if (window.confirm('Delete this event from the beta schedule? Production MySQL will not be changed.')) {
+      if (window.confirm('Permanently delete this event from the Pasban schedule?')) {
         void performDelete();
       }
       return;
@@ -108,7 +108,7 @@ export default function EventEditorScreen() {
 
     Alert.alert(
       'Delete this beta event?',
-      'This removes the event from the beta schedule only. Production MySQL will not be changed.',
+      'This permanently removes the event from the Pasban schedule.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -172,11 +172,11 @@ export default function EventEditorScreen() {
           <AdminEventForm disabled={saving} event={event} onSave={saveEvent} />
           <View style={styles.dangerZone}>
             <View style={styles.dangerCopy}>
-              <Text style={styles.dangerTitle}>Remove from beta schedule</Text>
-              <Text style={styles.meta}>Production remains unchanged. A newer production edit will restore the event for review.</Text>
+              <Text style={styles.dangerTitle}>Delete event</Text>
+              <Text style={styles.meta}>Permanently remove this event from the Pasban schedule.</Text>
             </View>
             <Pressable
-              accessibilityLabel="Delete event from beta schedule"
+              accessibilityLabel="Delete event from the Pasban schedule"
               disabled={saving}
               onPress={deleteEvent}
               style={[styles.deleteButton, saving && styles.disabledButton]}

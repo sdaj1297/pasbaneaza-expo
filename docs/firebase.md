@@ -52,9 +52,9 @@ submissions/{submissionId}
 
 `banners` controls homepage flyer/special event mode.
 
-`islamicCalendar/{lunarYear}` mirrors legacy `ISLAMIC_CALENDAR`: each document has `year`, `firstDate`, and twelve month length rows. The beta admin page can update month lengths to 29 or 30 days.
+`islamicCalendar/{lunarYear}` contains migrated `ISLAMIC_CALENDAR` data: each document has `year`, `firstDate`, and twelve month length rows. The admin page can update month lengths to 29 or 30 days.
 
-`islamicEvents` mirrors active legacy `ISLAMIC_EVENTS` rows for calendar observance labels.
+`islamicEvents` contains migrated active `ISLAMIC_EVENTS` rows for calendar observance labels.
 
 `submissions` is write-only from the public app.
 
