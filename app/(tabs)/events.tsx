@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { ChevronDown, Plus } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '@/components/AppShell';
@@ -12,6 +12,7 @@ import { fetchEvents, peekEvents } from '@/lib/api';
 import { AuthUser, subscribeToAuthState } from '@/lib/auth';
 
 const filters = ['All', 'Anjuman', 'Brothers', 'Sisters', 'Family'] as const;
+const EVENTS_PER_PAGE = 12;
 type Filter = (typeof filters)[number];
 
 export default function EventsScreen() {
@@ -19,12 +20,14 @@ export default function EventsScreen() {
   const [filtered, setFiltered] = useState<CommunityEvent[] | null>(
     () => peekEvents('all') ?? null,
   );
+  const [visibleCount, setVisibleCount] = useState(EVENTS_PER_PAGE);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   useEffect(() => {
     let active = true;
+    setVisibleCount(EVENTS_PER_PAGE);
     setFiltered(peekEvents(filter.toLowerCase()) ?? null);
     fetchEvents(filter.toLowerCase()).then((nextEvents) => {
       if (active) setFiltered(nextEvents);
@@ -33,6 +36,9 @@ export default function EventsScreen() {
       active = false;
     };
   }, [filter]);
+
+  const visibleEvents = filtered?.slice(0, visibleCount) ?? [];
+  const hasMoreEvents = Boolean(filtered && visibleCount < filtered.length);
 
   return (
     <AppShell title="Schedule" subtitle="Committed Anjuman programs and approved community majalis">
@@ -72,14 +78,29 @@ export default function EventsScreen() {
       </View>
 
       <View style={styles.scheduleSheet}>
-        {filtered.map((event, index) => (
+        {visibleEvents.map((event, index) => (
           <EventCard
             canEdit={Boolean(authUser?.isAdmin)}
             key={event.id}
             event={event}
-            isLast={index === filtered.length - 1}
+            isLast={!hasMoreEvents && index === visibleEvents.length - 1}
           />
         ))}
+        {hasMoreEvents ? (
+          <View style={styles.loadMoreWrap}>
+            <Text style={styles.loadMoreMeta}>
+              Showing {visibleEvents.length} of {filtered.length} upcoming events
+            </Text>
+            <Pressable
+              accessibilityLabel="Load more events"
+              onPress={() => setVisibleCount((current) => current + EVENTS_PER_PAGE)}
+              style={({ pressed }) => [styles.loadMoreButton, pressed && styles.loadMoreButtonPressed]}
+            >
+              <Text style={styles.loadMoreText}>Load more events</Text>
+              <ChevronDown color={colors.ivory} size={18} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+        ) : null}
         {!filtered.length ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No events in this view</Text>
@@ -171,6 +192,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ivory,
     borderRadius: radii.md,
     overflow: 'hidden',
+  },
+  loadMoreWrap: {
+    alignItems: 'center',
+    backgroundColor: colors.ivoryRaised,
+    borderTopColor: colors.onIvoryLine,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  loadMoreMeta: {
+    color: colors.onIvoryMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.small,
+    textAlign: 'center',
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    backgroundColor: colors.oxblood,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+  },
+  loadMoreButtonPressed: {
+    opacity: 0.82,
+  },
+  loadMoreText: {
+    color: colors.ivory,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
   },
   empty: {
     padding: spacing.xl,
