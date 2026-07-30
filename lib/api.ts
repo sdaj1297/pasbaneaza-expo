@@ -29,7 +29,6 @@ import {
   fetchHomeFromFirebase,
   fetchIslamicCalendarYearsFromFirebase,
   fetchPrayerTimesFromFirebase,
-  fetchProductionSyncStateFromFirebase,
   fetchTodayMajlisFromFirebase,
   peekCalendarMonthFromFirebase,
   peekEventsFromFirebase,
@@ -46,10 +45,7 @@ import {
   updateEventSubmissionStatusInFirebase,
   updateIslamicMonthLengthInFirebase,
   updateMajlisStatusInFirebase,
-  triggerProductionSyncFromFirebase,
 } from '@/lib/firebaseData';
-import type { ProductionSyncState } from '@/lib/firebaseData';
-export type { ProductionSyncState } from '@/lib/firebaseData';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -336,16 +332,6 @@ export async function fetchAdminEvents(): Promise<CommunityEvent[]> {
 
   const result = await request<{ events: CommunityEvent[] }>('/admin/events', { events });
   return result.events;
-}
-
-export async function fetchProductionSyncState(): Promise<ProductionSyncState> {
-  if (isFirebaseBackendEnabled()) return fetchProductionSyncStateFromFirebase();
-  return { status: 'unknown' };
-}
-
-export async function triggerProductionSync(): Promise<ProductionSyncState> {
-  if (isFirebaseBackendEnabled()) return triggerProductionSyncFromFirebase();
-  return { status: 'unknown' };
 }
 
 export async function fetchAdminEvent(eventId: string): Promise<CommunityEvent | null> {

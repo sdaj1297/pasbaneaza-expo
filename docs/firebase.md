@@ -188,12 +188,12 @@ export without enabling the retired production synchronization job.
 1. Import the production SQL export into the isolated local MySQL database.
 2. Set `FIREBASE_SERVICE_ACCOUNT_FILE` to a local Firebase Admin service
    account file. Never commit that file.
-3. Run `npm run firebase:import-production -- dry-run`.
-4. Run `npm run firebase:import-production -- apply`.
-5. Run `npm run firebase:import-production -- verify`.
+3. Run `npm run firebase:rebuild -- dry-run`.
+4. Run `npm run firebase:rebuild -- apply`.
+5. Run `npm run firebase:rebuild -- verify`.
 
 The apply command creates a compressed Firestore backup in the current
-user's Downloads directory before writing. It updates the normalized
-production mirror and effective schedule while preserving Firebase
-Authentication, submissions, beta-only event overrides, memberships,
-reminders, and majlis statuses.
+user's Downloads directory before writing. It clears application documents,
+imports the SQL snapshot into canonical collections, and restores only the
+preserved Shab-e-Aza banner. Firebase Authentication users and claims are not
+stored in Firestore and remain unchanged.

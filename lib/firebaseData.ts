@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import {
@@ -40,7 +41,7 @@ import {
 } from '@/lib/calendarUtils';
 import type { DocumentData } from 'firebase/firestore';
 import type { HomePayload } from '@/lib/api';
-import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
+import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import type {
   AdminEventReviewInput,
   AdminEventSubmission,
@@ -59,7 +60,7 @@ import {
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
-const EVENT_CACHE_KEY = 'firebase:events';
+const EVENT_CACHE_PREFIX = 'firebase:events:';
 const CALENDAR_YEARS_CACHE_KEY = 'firebase:islamic-calendar';
 const ISLAMIC_EVENTS_CACHE_KEY = 'firebase:islamic-events';
 const HOME_CACHE_KEY = 'firebase:home';
@@ -87,7 +88,7 @@ export async function fetchEventsFromFirebase(
   if (!isFirebaseBackendEnabled()) return fallbackEvents;
 
   try {
-    const events = await fetchAllEventsFromFirebase();
+    const events = await fetchEventsForRangeFromFirebase(options.from || getHoustonDate(), options.to);
     return filterEvents(events, filter, options);
   } catch (error) {
     console.warn('Unable to load events from Firestore.', error);
@@ -95,11 +96,18 @@ export async function fetchEventsFromFirebase(
   }
 }
 
-async function fetchAllEventsFromFirebase(): Promise<CommunityEvent[]> {
-  return loadCached(EVENT_CACHE_KEY, async () => {
+async function fetchEventsForRangeFromFirebase(from: string, to?: string): Promise<CommunityEvent[]> {
+  const cacheKey = `${EVENT_CACHE_PREFIX}${from}:${to || ''}`;
+  return loadCached(cacheKey, async () => {
     const db = getFirebaseDb();
+    const constraints = [
+      where('date', '>=', from),
+      ...(to ? [where('date', '<=', to)] : []),
+      orderBy('date'),
+      limit(MAX_EVENT_READS),
+    ];
     const [snapshot, calendarYears] = await Promise.all([
-      getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS))),
+      getDocs(query(collection(db, 'events'), ...constraints)),
       fetchIslamicCalendarYearsFromFirebase(),
     ]);
     return snapshot.docs
@@ -369,17 +377,6 @@ export async function updateIslamicMonthLengthInFirebase(
   };
 
   const db = getFirebaseDb();
-  const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorIslamicCalendar', String(year)));
-  await setDoc(
-    doc(db, 'betaIslamicCalendarOverrides', String(year)),
-    {
-      kind: 'update',
-      baseHash: mirrorSnapshot.exists() ? String(mirrorSnapshot.data().sourceHash || '') : '',
-      year: nextYear,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
   await setDoc(
     doc(db, 'islamicCalendar', String(year)),
     {
@@ -459,32 +456,15 @@ export async function fetchAdminEventsFromFirebase(): Promise<CommunityEvent[]> 
   if (!isFirebaseBackendEnabled()) return fallbackEvents;
 
   try {
-    const db = getFirebaseDb();
-    const [mirrorResult, effectiveResult] = await Promise.allSettled([
-      getDocs(query(collection(db, 'prodMirrorEvents'), orderBy('date'), limit(MAX_EVENT_READS))),
-      getDocs(query(collection(db, 'events'), orderBy('date'), limit(MAX_EVENT_READS))),
-    ]);
-    if (mirrorResult.status === 'rejected' && effectiveResult.status === 'rejected') {
-      throw effectiveResult.reason;
-    }
-
-    const mirrorDocs = mirrorResult.status === 'fulfilled' ? mirrorResult.value.docs : [];
-    const effectiveDocs = effectiveResult.status === 'fulfilled' ? effectiveResult.value.docs : [];
     const today = getHoustonDate();
-    const effectiveById = new Map(effectiveDocs.map((eventDoc) => [
-      eventDoc.id,
-      normalizeEvent(eventDoc.id, eventDoc.data()),
-    ]));
-    const mirrorEvents = mirrorDocs.map((eventDoc) => (
-      effectiveById.get(eventDoc.id) || normalizeEvent(eventDoc.id, eventDoc.data())
+    const snapshot = await getDocs(query(
+      collection(getFirebaseDb(), 'events'),
+      where('date', '>=', today),
+      orderBy('date'),
+      limit(MAX_EVENT_READS),
     ));
-    const mirrorIds = new Set(mirrorDocs.map((eventDoc) => eventDoc.id));
-    const betaEvents = effectiveDocs
-      .filter((eventDoc) => !mirrorIds.has(eventDoc.id))
-      .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()));
-
-    return [...mirrorEvents, ...betaEvents]
-      .filter((event) => event.date >= today)
+    return snapshot.docs
+      .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
       .sort(compareEvents);
   } catch (error) {
     console.warn('Unable to load admin events from Firestore.', error);
@@ -499,13 +479,8 @@ export async function fetchAdminEventFromFirebase(eventId: string): Promise<Comm
 
   try {
     const db = getFirebaseDb();
-    const effectiveSnapshot = await getDoc(doc(db, 'events', eventId));
-    if (effectiveSnapshot.exists()) {
-      return normalizeEvent(effectiveSnapshot.id, effectiveSnapshot.data());
-    }
-
-    const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorEvents', eventId));
-    return mirrorSnapshot.exists() ? normalizeEvent(mirrorSnapshot.id, mirrorSnapshot.data()) : null;
+    const snapshot = await getDoc(doc(db, 'events', eventId));
+    return snapshot.exists() ? normalizeEvent(snapshot.id, snapshot.data()) : null;
   } catch (error) {
     console.warn('Unable to load admin event from Firestore.', error);
     return null;
@@ -593,22 +568,6 @@ export async function deleteAdminEventInFirebase(eventId: string, eventDate: str
   if (!isFirebaseBackendEnabled()) return;
 
   const db = getFirebaseDb();
-  const mirrorRef = doc(db, 'prodMirrorEvents', eventId);
-  try {
-    const mirrorSnapshot = await getDoc(mirrorRef);
-    if (mirrorSnapshot.exists()) {
-      await setDoc(doc(db, 'betaEventOverrides', eventId), {
-        kind: 'delete',
-        baseHash: String(mirrorSnapshot.data().sourceHash || ''),
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      await deleteDoc(doc(db, 'betaEventOverrides', eventId));
-    }
-  } catch (error) {
-    console.warn('Unable to update the optional production override record.', error);
-  }
-
   await deleteDoc(doc(db, 'events', eventId));
   await deleteDoc(doc(db, 'eventDays', eventDate, 'items', eventId));
   invalidateEventCaches();
@@ -617,18 +576,6 @@ export async function deleteAdminEventInFirebase(eventId: string, eventDate: str
 async function writeEvent(event: CommunityEvent, originalDate?: string): Promise<void> {
   const db = getFirebaseDb();
   const eventPayload = serializeEvent(event);
-  try {
-    const mirrorSnapshot = await getDoc(doc(db, 'prodMirrorEvents', event.id));
-    await setDoc(doc(db, 'betaEventOverrides', event.id), {
-      kind: mirrorSnapshot.exists() ? 'update' : 'created',
-      baseHash: mirrorSnapshot.exists() ? String(mirrorSnapshot.data().sourceHash || '') : '',
-      event: eventPayload,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (error) {
-    console.warn('Unable to update the optional production override record.', error);
-  }
-
   await setDoc(doc(db, 'events', event.id), eventPayload, { merge: true });
   await setDoc(doc(db, 'eventDays', event.date), {
     date: event.date,
@@ -641,56 +588,6 @@ async function writeEvent(event: CommunityEvent, originalDate?: string): Promise
     await deleteDoc(doc(db, 'eventDays', originalDate, 'items', event.id));
   }
   invalidateEventCaches();
-}
-
-export type ProductionSyncState = {
-  status: 'current' | 'error' | 'unknown';
-  sourceHash?: string;
-  sourceGeneratedAt?: string;
-  sourceToday?: string;
-  counts?: Record<string, number>;
-  writes?: number;
-  lastSuccessAt?: string;
-  lastCheckedAt?: string;
-  lastError?: string;
-};
-
-export async function fetchProductionSyncStateFromFirebase(): Promise<ProductionSyncState> {
-  if (!isFirebaseBackendEnabled()) return { status: 'unknown' };
-
-  try {
-    const snapshot = await getDoc(doc(getFirebaseDb(), 'prodSyncState', 'current'));
-    if (!snapshot.exists()) return { status: 'unknown' };
-    const data = snapshot.data();
-    return {
-      status: data.status === 'current' || data.status === 'error' ? data.status : 'unknown',
-      sourceHash: stringOrUndefined(data.sourceHash),
-      sourceGeneratedAt: stringOrUndefined(data.sourceGeneratedAt),
-      sourceToday: stringOrUndefined(data.sourceToday),
-      counts: isRecord(data.counts) ? data.counts as Record<string, number> : undefined,
-      writes: typeof data.writes === 'number' ? data.writes : undefined,
-      lastSuccessAt: normalizeTimestamp(data.lastSuccessAt),
-      lastCheckedAt: normalizeTimestamp(data.lastCheckedAt),
-      lastError: stringOrUndefined(data.lastError),
-    };
-  } catch (error) {
-    console.warn('Unable to load production synchronization state.', error);
-    return { status: 'unknown' };
-  }
-}
-
-export async function triggerProductionSyncFromFirebase(): Promise<ProductionSyncState> {
-  if (!isFirebaseBackendEnabled()) return { status: 'unknown' };
-
-  const user = getFirebaseAuth().currentUser;
-  if (!user) throw new Error('Admin login required.');
-  const token = await user.getIdToken();
-  const response = await fetch('/.netlify/functions/prod-sync-admin', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Sync request failed with HTTP ${response.status}.`);
-  return fetchProductionSyncStateFromFirebase();
 }
 
 async function fetchIslamicEventsFromFirebase(): Promise<IslamicCalendarEvent[]> {
@@ -713,7 +610,8 @@ export function peekEventsFromFirebase(
   filter = 'all',
   options: { from?: string; to?: string; approvedOnly?: boolean } = {},
 ): CommunityEvent[] | undefined {
-  const events = peekCached<CommunityEvent[]>(EVENT_CACHE_KEY);
+  const from = options.from || getHoustonDate();
+  const events = peekCached<CommunityEvent[]>(`${EVENT_CACHE_PREFIX}${from}:${options.to || ''}`);
   return events ? filterEvents(events, filter, options) : undefined;
 }
 
@@ -769,7 +667,8 @@ function mergeMajlisStatuses(
 }
 
 function invalidateEventCaches() {
-  invalidateCached(EVENT_CACHE_KEY, HOME_CACHE_KEY);
+  invalidateCached(HOME_CACHE_KEY);
+  invalidateCachedPrefix(EVENT_CACHE_PREFIX);
   invalidateCachedPrefix('firebase:calendar:');
 }
 
@@ -944,9 +843,13 @@ function normalizePrayerTimes(value: unknown): PrayerTime[] {
   return times;
 }
 
-function isPublicEvent(event: CommunityEvent, approvedOnly = false) {
-  if (!event.isPublished || !event.date) return false;
-  return approvedOnly ? !event.waitingApproval && !event.isPlaceholder : true;
+function isPublicEvent(event: CommunityEvent, _approvedOnly = false) {
+  return Boolean(
+    event.isPublished
+    && event.date
+    && !event.waitingApproval
+    && !event.isPlaceholder,
+  );
 }
 
 function matchesFilter(event: CommunityEvent, filter: string) {
