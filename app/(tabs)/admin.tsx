@@ -78,7 +78,7 @@ export default function AdminScreen() {
   );
 
   const pendingSubmissions = eventSubmissions.filter((submission) => submission.status === 'pending_review');
-  const reviewedSubmissions = eventSubmissions.filter((submission) => submission.status !== 'pending_review').slice(0, 8);
+  const pendingEvents = adminEvents.filter((event) => event.waitingApproval);
 
   const refreshEvents = async () => {
     setEventsBusy(true);
@@ -243,28 +243,17 @@ export default function AdminScreen() {
                 ))}
 
                 <Card>
-                  <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                  <Text style={styles.sectionTitle}>Scheduled Events Pending Approval</Text>
                   <Text style={styles.sectionMeta}>
-                    Choose one event to open its dedicated editor. Pencil actions also appear on schedule cards while you are signed in.
+                    {pendingEvents.length
+                      ? `${pendingEvents.length} ${pendingEvents.length === 1 ? 'event is' : 'events are'} waiting for review.`
+                      : 'No scheduled events are waiting for approval.'}
                   </Text>
                 </Card>
 
-                {adminEvents.map((event) => (
+                {pendingEvents.map((event) => (
                   <AdminEventLink event={event} key={event.id} />
                 ))}
-
-                {reviewedSubmissions.length ? (
-                  <Card>
-                    <Text style={styles.sectionTitle}>Recently Reviewed</Text>
-                    <View style={styles.reviewedStack}>
-                      {reviewedSubmissions.map((submission) => (
-                        <Text key={submission.id} style={styles.meta}>
-                          {payloadText(submission.payload, 'eventDate') || 'Date pending'} / {payloadText(submission.payload, 'eventTitle') || 'Majlis'} / {submission.status}
-                        </Text>
-                      ))}
-                    </View>
-                  </Card>
-                ) : null}
               </>
             ) : null}
 
@@ -468,7 +457,7 @@ function AdminEventLink({ event }: { event: CommunityEvent }) {
         <View style={styles.eventLinkCopy}>
           <Text style={styles.name}>{event.contactName || event.title || 'Majlis'}</Text>
           <Text style={styles.meta}>
-            {event.date} / {event.time || 'Time TBD'} / {event.isPlaceholder || event.waitingApproval ? 'Placeholder or pending' : 'Published'}
+            {event.date} / {event.time || 'Time TBD'}{event.isPlaceholder ? ' / Placeholder' : ''}
           </Text>
         </View>
         <Link href={{ pathname: '/event-editor', params: { eventId: event.id } }} asChild>
@@ -716,10 +705,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
     marginTop: spacing.md,
-  },
-  reviewedStack: {
-    gap: spacing.xs,
-    marginTop: spacing.sm,
   },
   reviewGrid: {
     alignItems: 'flex-start',
