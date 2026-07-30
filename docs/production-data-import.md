@@ -22,8 +22,9 @@ compressed Firestore backup before clearing application collections.
 
 The Shab-e-Aza banner `banners/beta-shab-e-aza-2026` is restored byte-for-byte
 at the field level. SQL announcement `9` is excluded, while SQL event `4378`
-remains the canonical schedule entry. Phone numbers, email addresses,
-passwords, and sessions are never selected from MySQL.
+remains the canonical schedule entry. One public event contact number is
+selected from `CONTACT_CELL` or `CONTACT_PHONE`; email addresses, passwords,
+and sessions are never selected from MySQL.
 
 Firebase Authentication is a separate service and is not modified by the
 Firestore rebuild.

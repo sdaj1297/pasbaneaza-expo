@@ -340,6 +340,11 @@ export default function ConnectScreen() {
                   keyboardType="phone-pad"
                   onChangeText={(value) => updateField('phone', value)}
                 />
+                {selectedType === 'event' ? (
+                  <Text style={styles.helperText}>
+                    This number will appear on the public event listing so attendees can contact the host.
+                  </Text>
+                ) : null}
 
                 {selectedType === 'event' ? (
                   <>

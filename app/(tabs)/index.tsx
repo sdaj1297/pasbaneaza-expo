@@ -8,6 +8,7 @@ import {
   HandHeart,
   MapPin,
   Play,
+  Phone,
   Radio,
   Users,
 } from 'lucide-react-native';
@@ -207,6 +208,8 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          <PrayerStrip times={times} />
+
           <View style={[styles.nextBlock, compact && styles.compactNextBlock]}>
             <NextMajlis
               item={nextAnjuman}
@@ -231,7 +234,6 @@ export default function HomeScreen() {
               committedCount={mergedEvents.filter((event) => event.isAnjumanSchedule).length}
               communityCount={mergedEvents.filter((event) => !event.isAnjumanSchedule).length}
             />
-            <PrayerPreview times={times} />
             {!hasRealFlyer && featured.isActive ? <FeaturedNotice event={featured} /> : null}
             <CommunityLinks />
           </View>
@@ -308,9 +310,19 @@ function NextMajlis({
           >
             <MapPin color={colors.gold} size={16} strokeWidth={1.8} />
             <Text style={styles.locationText}>
-              {item.locationName || item.address || 'Location to be announced'}
+              {item.address || item.locationName || 'Location to be announced'}
             </Text>
           </Pressable>
+          {item.contactPhone ? (
+            <Pressable
+              accessibilityLabel={`Call ${item.contactName || 'event contact'} at ${item.contactPhone}`}
+              onPress={() => openPhone(item.contactPhone)}
+              style={styles.locationLink}
+            >
+              <Phone color={colors.gold} size={16} strokeWidth={1.8} />
+              <Text style={styles.locationText}>{item.contactPhone}</Text>
+            </Pressable>
+          ) : null}
         </>
       ) : (
         <Text style={styles.nextProgram}>No committed program is currently listed.</Text>
@@ -435,13 +447,13 @@ function Metric({ value, label }: { value: number; label: string }) {
   );
 }
 
-function PrayerPreview({ times }: { times: PrayerTime[] }) {
+function PrayerStrip({ times }: { times: PrayerTime[] }) {
   return (
-    <View style={styles.railSection}>
-      <View style={styles.railHeader}>
+    <View style={styles.prayerStrip}>
+      <View style={styles.prayerStripHeader}>
         <View>
-          <Text style={styles.railEyebrow}>Prayer times</Text>
-          <Text style={styles.railTitle}>Houston</Text>
+          <Text style={styles.prayerStripEyebrow}>Prayer times</Text>
+          <Text style={styles.prayerStripCity}>Houston</Text>
         </View>
         <Link href="/prayer" asChild>
           <Pressable accessibilityLabel="View prayer times" style={styles.iconLink}>
@@ -449,11 +461,11 @@ function PrayerPreview({ times }: { times: PrayerTime[] }) {
           </Pressable>
         </Link>
       </View>
-      <View style={styles.prayerList}>
+      <View style={styles.prayerStripTimes}>
         {times.slice(0, 5).map((item) => (
-          <View key={item.label} style={styles.prayerRow}>
-            <Text style={styles.prayerLabel}>{item.label}</Text>
-            <Text style={styles.prayerTime}>{item.time}</Text>
+          <View key={item.label} style={styles.prayerStripItem}>
+            <Text style={styles.prayerStripLabel}>{item.label}</Text>
+            <Text style={styles.prayerStripTime}>{item.time}</Text>
           </View>
         ))}
       </View>
@@ -579,6 +591,11 @@ function dedupeEvents(events: CommunityEvent[]) {
   });
 }
 
+function openPhone(value?: string) {
+  const phone = value?.replace(/[^\d+]/g, '');
+  if (phone) Linking.openURL(`tel:${phone}`);
+}
+
 const styles = StyleSheet.create({
   liveMajlisHero: {
     backgroundColor: colors.committedBg,
@@ -593,21 +610,18 @@ const styles = StyleSheet.create({
   },
   todayHero: {
     alignItems: 'stretch',
-    flexDirection: 'row',
-    gap: spacing.xl,
+    flexDirection: 'column',
+    gap: spacing.lg,
     minHeight: 205,
     paddingVertical: spacing.xl,
   },
   compactHero: {
-    flexDirection: 'column',
     gap: spacing.lg,
     minHeight: 0,
     paddingBottom: spacing.lg,
     paddingTop: spacing.lg,
   },
   dateBlock: {
-    flexBasis: 340,
-    flexGrow: 1,
     justifyContent: 'center',
   },
   compactDateBlock: {
@@ -664,8 +678,6 @@ const styles = StyleSheet.create({
   nextBlock: {
     borderLeftColor: colors.goldDark,
     borderLeftWidth: 2,
-    flexBasis: 480,
-    flexGrow: 1,
     justifyContent: 'center',
     paddingLeft: spacing.xl,
   },
@@ -936,26 +948,56 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  prayerList: {
-    marginTop: spacing.md,
-  },
-  prayerRow: {
-    alignItems: 'baseline',
+  prayerStrip: {
+    borderBottomColor: colors.borderSoft,
+    borderBottomWidth: 1,
     borderTopColor: colors.borderSoft,
     borderTopWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingVertical: spacing.sm,
   },
-  prayerLabel: {
+  prayerStripHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'space-between',
+  },
+  prayerStripEyebrow: {
+    color: colors.gold,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.overline,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  prayerStripCity: {
     color: colors.muted,
     fontFamily: fonts.bodyMedium,
-    fontSize: typography.small,
+    fontSize: typography.overline,
+    marginTop: 1,
   },
-  prayerTime: {
+  prayerStripTimes: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  prayerStripItem: {
+    alignItems: 'center',
+    borderLeftColor: colors.borderSoft,
+    borderLeftWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+    paddingHorizontal: 3,
+  },
+  prayerStripLabel: {
+    color: colors.textSubtle,
+    fontFamily: fonts.bodyBold,
+    fontSize: 9,
+  },
+  prayerStripTime: {
     color: colors.ink,
     fontFamily: fonts.bodySemibold,
-    fontSize: typography.body,
+    fontSize: 12,
+    marginTop: 2,
   },
   flyerStage: {
     alignItems: 'center',

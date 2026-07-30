@@ -64,6 +64,7 @@ export default function EventEditorScreen() {
       const updatedEvent = await updateAdminEvent(event.id, event.date, {
         title: draft.title,
         contactName: draft.contactName,
+        contactPhone: draft.contactPhone,
         date: draft.date,
         time: draft.time,
         address: draft.address,

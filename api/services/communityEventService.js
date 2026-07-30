@@ -142,6 +142,7 @@ function buildCommunityEventPayload(normalized, eventId, now) {
     eventId,
     title: normalized.event.title,
     contactName: normalized.contact.name,
+    contactPhone: normalized.contact.phone,
     date: normalized.event.date,
     time: normalized.event.time,
     sortTime: toSortTime(normalized.event.time),

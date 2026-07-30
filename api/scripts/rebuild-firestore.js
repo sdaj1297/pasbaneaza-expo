@@ -124,6 +124,7 @@ async function buildSnapshot() {
     pool.query(
       `select
          e.PKID id, e.EVENT_NAME title, e.CONTACT_NAME contact_name,
+         e.CONTACT_PHONE contact_phone, e.CONTACT_CELL contact_cell,
          date_format(e.EVENT_DATE, '%Y-%m-%d') event_date,
          date_format(e.EVENT_DATE, '%l:%i %p') event_time,
          e.ETYPE event_type, e.FLYER flyer, e.SOCIALURL social_url,
@@ -213,6 +214,7 @@ async function buildSnapshot() {
       eventId: id,
       title: clean(row.title) || 'Majlis',
       contactName: clean(row.contact_name) || clean(row.title) || 'Pasban-e-Aza',
+      contactPhone: clean(row.contact_cell) || clean(row.contact_phone),
       date,
       time,
       sortTime: timeToMinutes(time),
@@ -525,7 +527,7 @@ async function verifyFirestore(db, snapshot) {
     islamicEvents: islamicEventCount.data().count,
   };
   const eventDocuments = await db.collection('events').get();
-  const bannedKeys = ['email', 'phone', 'cell', 'password', 'session'];
+  const bannedKeys = ['email', 'password', 'session'];
   const piiFields = eventDocuments.docs.flatMap((document) => (
     Object.keys(document.data())
       .filter((key) => bannedKeys.some((term) => key.toLowerCase().includes(term)))

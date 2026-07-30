@@ -28,6 +28,7 @@ const anjumanApprovalOptions: SelectOption[] = [
 export type AdminEventDraft = {
   title: string;
   contactName: string;
+  contactPhone: string;
   date: string;
   time: string;
   address: string;
@@ -103,6 +104,16 @@ export function AdminEventForm({
             onChangeText={(value) => updateDraft('contactName', value)}
           />
         </Field>
+        <Field label="Contact phone">
+          <TextInput
+            keyboardType="phone-pad"
+            placeholder="Contact phone"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            value={draft.contactPhone}
+            onChangeText={(value) => updateDraft('contactPhone', value)}
+          />
+        </Field>
         <FormPicker layout="grid" label="Date" value={draft.date} options={currentDateOptions} onChange={(value) => updateDraft('date', value)} />
         <FormPicker layout="grid" label="Time" value={draft.time} options={currentTimeOptions} onChange={(value) => updateDraft('time', value)} />
         <FormPicker layout="grid" label="Event For" value={draft.audience} options={eventAudienceOptions} onChange={(value) => updateDraft('audience', value)} />
@@ -160,6 +171,7 @@ function eventToDraft(event: CommunityEvent): AdminEventDraft {
   return {
     title: event.title || '',
     contactName: event.contactName || '',
+    contactPhone: event.contactPhone || '',
     date: event.date || '',
     time: event.time || '',
     address: event.address || '',

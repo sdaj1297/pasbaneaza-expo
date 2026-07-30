@@ -54,6 +54,7 @@
     "firebase:backup": "node api/scripts/rebuild-firestore.js backup",
     "firebase:rebuild": "node api/scripts/rebuild-firestore.js",
     "firebase:import-users": "node api/scripts/import-firebase-auth-users.js",
+    "firebase:backfill-event-phones": "node api/scripts/backfill-event-contact-phones.js",
     "firebase:backfill-status-windows": "node api/scripts/backfill-status-update-windows.js",
     "verify:community-events": "node api/scripts/verify-community-event-workflow.js",
     "verify:api": "node api/scripts/verify-api.js"

@@ -6,6 +6,7 @@ export type CommunityEvent = {
   id: string;
   title: string;
   contactName: string;
+  contactPhone?: string;
   date: string;
   time: string;
   islamicDate: string;

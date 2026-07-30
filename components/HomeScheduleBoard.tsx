@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { ArrowUpRight, MapPin, Pencil, Plus } from 'lucide-react-native';
+import { ArrowUpRight, MapPin, Pencil, Phone, Plus } from 'lucide-react-native';
 import {
   Image,
   Linking,
@@ -122,6 +122,10 @@ function ScheduleRow({
     if (!event.address) return;
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`);
   };
+  const callContact = () => {
+    const phone = event.contactPhone?.replace(/[^\d+]/g, '');
+    if (phone) Linking.openURL(`tel:${phone}`);
+  };
 
   return (
     <View style={[styles.row, compact && styles.compactRow, isLast && styles.lastRow]}>
@@ -145,10 +149,20 @@ function ScheduleRow({
           <MapPin color={colors.onIvoryMuted} size={15} strokeWidth={1.8} />
           <Text style={styles.location}>{event.locationName || event.address || 'Location to be announced'}</Text>
         </View>
-        {compact && event.address ? (
+        {event.address ? (
           <Pressable onPress={openMaps} style={styles.mobileMapLink}>
-            <Text style={styles.mapText}>Open map</Text>
+            <Text style={styles.mapText}>{event.address}</Text>
             <ArrowUpRight color={colors.oxblood} size={16} strokeWidth={2} />
+          </Pressable>
+        ) : null}
+        {event.contactPhone ? (
+          <Pressable
+            accessibilityLabel={`Call ${event.contactName || 'event contact'} at ${event.contactPhone}`}
+            onPress={callContact}
+            style={styles.phoneLink}
+          >
+            <Phone color={colors.oxblood} size={15} strokeWidth={1.9} />
+            <Text style={styles.phoneText}>{event.contactPhone}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -426,16 +440,31 @@ const styles = StyleSheet.create({
     width: 40,
   },
   mobileMapLink: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     alignSelf: 'flex-start',
     flexDirection: 'row',
     gap: spacing.xs,
     marginTop: spacing.sm,
     minHeight: 32,
+    maxWidth: 680,
   },
   mapText: {
     color: colors.oxblood,
+    flexShrink: 1,
     fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+    lineHeight: 19,
+  },
+  phoneLink: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 30,
+  },
+  phoneText: {
+    color: colors.oxblood,
+    fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
   },
   empty: {

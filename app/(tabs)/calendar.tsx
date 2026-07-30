@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Download,
   MapPin,
+  Phone,
 } from 'lucide-react-native';
 import {
   Image,
@@ -309,6 +310,24 @@ function AgendaEvent({ event, isLast }: { event: CommunityEvent; isLast: boolean
         <Text style={styles.agendaHost}>{event.contactName || event.title}</Text>
         <Text style={styles.agendaProgram}>{event.title}</Text>
         <Text style={styles.agendaAudience}>{getEventAudienceLabel(event)}</Text>
+        {event.address ? (
+          <Pressable
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`)}
+            style={styles.agendaContactLink}
+          >
+            <MapPin color={colors.gold} size={15} strokeWidth={1.8} />
+            <Text style={styles.agendaContactText}>{event.address}</Text>
+          </Pressable>
+        ) : null}
+        {event.contactPhone ? (
+          <Pressable
+            onPress={() => Linking.openURL(`tel:${event.contactPhone?.replace(/[^\d+]/g, '')}`)}
+            style={styles.agendaContactLink}
+          >
+            <Phone color={colors.gold} size={15} strokeWidth={1.8} />
+            <Text style={styles.agendaContactText}>{event.contactPhone}</Text>
+          </Pressable>
+        ) : null}
       </View>
       {event.address ? (
         <Pressable
@@ -712,6 +731,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     fontSize: typography.small,
     marginTop: spacing.xs,
+  },
+  agendaContactLink: {
+    alignItems: 'flex-start',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    maxWidth: 620,
+    minHeight: 26,
+  },
+  agendaContactText: {
+    color: colors.goldSoft,
+    flexShrink: 1,
+    fontFamily: fonts.bodySemibold,
+    fontSize: typography.small,
+    lineHeight: 19,
   },
   mapButton: {
     alignItems: 'center',

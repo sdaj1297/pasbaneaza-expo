@@ -121,8 +121,10 @@ Community event publication and Anjuman participation are independent:
 - A pending or declined Anjuman request remains visible as a normal community
   event.
 
-Contact email and phone remain in the admin-only `submissions` collection and
-are not copied into public event documents.
+Contact email remains in the admin-only `submissions` collection. The submitted
+contact phone is copied to `contactPhone` on the public event document so
+attendees can reach the host; the submission form discloses this before
+publication. Placeholder reservation cards never display the address or phone.
 
 Each event also stores `statusUpdatesOpenAt`, calculated as 30 minutes before
 its scheduled start in `America/Chicago`. Public live-status writes are rejected

@@ -63,10 +63,10 @@ import { getPublicStatusUpdateWindow } from '@/lib/statusUpdateWindow';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
-const EVENT_CACHE_PREFIX = 'firebase:events:';
+const EVENT_CACHE_PREFIX = 'firebase:events:v2:';
 const CALENDAR_YEARS_CACHE_KEY = 'firebase:islamic-calendar';
 const ISLAMIC_EVENTS_CACHE_KEY = 'firebase:islamic-events';
-const HOME_CACHE_KEY = 'firebase:home';
+const HOME_CACHE_KEY = 'firebase:home:v2';
 const PRAYER_CACHE_KEY = 'firebase:prayer-times';
 const EVENT_TTL_MS = 60_000;
 const CONTENT_TTL_MS = 5 * 60_000;
@@ -150,7 +150,7 @@ export async function fetchCalendarMonthFromFirebase(
     });
   }
 
-  const cacheKey = `firebase:calendar:${date.slice(0, 7)}:${filter}`;
+  const cacheKey = `firebase:calendar:v2:${date.slice(0, 7)}:${filter}`;
   return loadCached(cacheKey, async () => {
     const range = getMonthRange(date);
     const [events, calendarYears, islamicEvents] = await Promise.all([
@@ -515,6 +515,7 @@ export async function createEventFromSubmissionInFirebase(
     id: eventId,
     title: stringOrUndefined(payload.eventTitle) || 'Majlis',
     contactName: submission.name || stringOrUndefined(payload.contactName) || 'Contact pending',
+    contactPhone: submission.phone || stringOrUndefined(payload.contactPhone),
     date: normalizeDate(payload.eventDate),
     time: String(payload.eventTime || ''),
     islamicDate: '',
@@ -756,6 +757,7 @@ function normalizeEvent(id: string, data: DocumentData): CommunityEvent {
     id: String(data.id || data.eventId || id),
     title: String(data.title || data.eventTitle || data.EVENT_DESC || 'Majlis'),
     contactName: String(data.contactName || data.contact || data.name || data.title || 'Pasban-e-Aza'),
+    contactPhone: stringOrUndefined(data.contactPhone || data.CONTACT_CELL || data.CONTACT_PHONE),
     date: normalizeDate(data.date || data.eventDate || data.EVENT_DATE),
     time: String(data.time || data.eventTime || ''),
     islamicDate: String(data.islamicDate || data.hijriDate || ''),
@@ -811,6 +813,7 @@ function serializeEvent(event: CommunityEvent): Record<string, unknown> {
     eventId: event.id,
     title: event.title || 'Majlis',
     contactName: event.contactName || event.title || 'Contact pending',
+    contactPhone: event.contactPhone || '',
     date: event.date,
     time: event.time || '',
     sortTime: toSortTime(event.time || ''),

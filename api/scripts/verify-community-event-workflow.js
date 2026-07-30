@@ -45,6 +45,7 @@ assert.equal(publicEvent.isPlaceholder, false);
 assert.equal(publicEvent.isAnjumanSchedule, false);
 assert.equal(publicEvent.anjumanApprovalStatus, 'pending');
 assert.equal(Object.hasOwn(publicEvent, 'email'), false);
+assert.equal(publicEvent.contactPhone, '713-555-1212');
 assert.equal(Object.hasOwn(publicEvent, 'phone'), false);
 assert.equal(
   getStatusUpdatesOpenAt('2026-07-30', '7:00 PM').toISOString(),
