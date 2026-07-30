@@ -118,6 +118,8 @@ export type PublicSubmissionResult = {
   id: string;
   type: PublicSubmissionType;
   status: 'new' | 'pending_review' | string;
+  notificationSent?: boolean;
+  confirmationSent?: boolean;
 };
 
 export type AdminSubmissionStatus =
@@ -326,6 +328,21 @@ export async function updateIslamicMonthLength(year: number, month: number, leng
 }
 
 export async function submitPublicForm(input: PublicSubmissionInput): Promise<PublicSubmissionResult> {
+  if (input.type === 'membership') {
+    const response = await fetch(`${API_BASE}/forms/membership`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+    if (!response.ok) {
+      throw new Error(`Membership submission failed (${response.status}).`);
+    }
+    const result = await response.json() as { submission: PublicSubmissionResult };
+    return result.submission;
+  }
+
   if (isFirebaseBackendEnabled()) return submitPublicFormToFirebase(input);
 
   const fallback: PublicSubmissionResult = {
