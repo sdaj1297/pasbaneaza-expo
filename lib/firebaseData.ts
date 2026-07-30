@@ -30,6 +30,7 @@ import {
 } from '@/data/mock';
 import {
   buildCalendarMonth,
+  addCalendarMonths,
   calculateIslamicDate,
   CalendarFilter,
   CalendarMonthPayload,
@@ -171,10 +172,15 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
     return await loadCached(HOME_CACHE_KEY, async () => {
     const db = getFirebaseDb();
     const today = getHoustonDate();
+    const rangeEnd = addCalendarMonths(today, 6);
     const [homeDoc, bannerSnapshot, events, calendarYears] = await Promise.all([
       getDoc(doc(db, 'settings', 'home')),
       getDocs(query(collection(db, 'banners'), limit(20))),
-      fetchEventsFromFirebase('anjuman', { approvedOnly: true }),
+      fetchEventsFromFirebase('anjuman', {
+        from: today,
+        to: rangeEnd,
+        approvedOnly: true,
+      }),
       fetchIslamicCalendarYearsFromFirebase(),
     ]);
 
@@ -183,7 +189,7 @@ export async function fetchHomeFromFirebase(): Promise<HomePayload & { specialEv
       .map((bannerDoc) => normalizeBanner(bannerDoc.id, bannerDoc.data(), today))
       .find((banner) => banner.isActive);
     const islamicDate = calculateIslamicDate(today, calendarYears);
-    const upcomingEvents = events.slice(0, 6);
+    const upcomingEvents = events;
 
     return {
       date: today,

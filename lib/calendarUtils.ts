@@ -127,6 +127,20 @@ export function addMonths(dateString: string, amount: number) {
   return formatDate(date);
 }
 
+export function addCalendarMonths(dateString: string, amount: number) {
+  const date = parseDate(dateString);
+  const originalDay = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + amount);
+  const daysInTargetMonth = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth() + 1,
+    0,
+  )).getUTCDate();
+  date.setUTCDate(Math.min(originalDay, daysInTargetMonth));
+  return formatDate(date);
+}
+
 export function addDays(dateString: string, amount: number) {
   const date = parseDate(dateString);
   date.setUTCDate(date.getUTCDate() + amount);

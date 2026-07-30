@@ -50,6 +50,7 @@ import {
   selectNextCommittedEvent,
 } from '@/lib/eventTiming';
 import { majlisStages } from '@/lib/majlisStatus';
+import { addCalendarMonths, getHoustonDate } from '@/lib/calendarUtils';
 
 const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eventType: string) => boolean> = {
   brothers: (eventType) => ['M', 'F', 'A'].includes(eventType),
@@ -60,12 +61,16 @@ const audienceMatch: Record<Exclude<HomeScheduleFilter, 'all' | 'anjuman'>, (eve
 export default function HomeScreen() {
   const width = useResponsiveWidth();
   const compact = width < 820;
+  const [eventWindow] = useState(() => {
+    const from = getHoustonDate();
+    return { from, to: addCalendarMonths(from, 6), approvedOnly: true };
+  });
   const [audience, setAudience] = useState<HomeScheduleFilter>('anjuman');
   const [homeEvents, setHomeEvents] = useState<CommunityEvent[]>(
     () => peekHome()?.upcomingEvents ?? [],
   );
   const [allEvents, setAllEvents] = useState<CommunityEvent[]>(
-    () => peekEvents('all') ?? [],
+    () => peekEvents('all', eventWindow) ?? [],
   );
   const [times, setTimes] = useState<PrayerTime[]>(() => peekHome()?.prayerTimes ?? []);
   const [currentDate, setCurrentDate] = useState(() => peekHome()?.date ?? '');
@@ -80,7 +85,7 @@ export default function HomeScreen() {
     () => peekTodayMajlis() ?? [],
   );
   const [dataReady, setDataReady] = useState(
-    () => Boolean(peekHome() && peekEvents('all')),
+    () => Boolean(peekHome() && peekEvents('all', eventWindow)),
   );
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [clock, setClock] = useState(() => new Date());
@@ -88,7 +93,7 @@ export default function HomeScreen() {
   useEffect(() => {
     let active = true;
 
-    Promise.all([fetchHome(), fetchEvents('all')]).then(([home, events]) => {
+    Promise.all([fetchHome(), fetchEvents('all', eventWindow)]).then(([home, events]) => {
       if (!active) return;
       setHomeEvents(home.upcomingEvents);
       setAllEvents(events);
@@ -109,15 +114,16 @@ export default function HomeScreen() {
       active = false;
       clearInterval(refreshTimer);
     };
-  }, []);
+  }, [eventWindow]);
 
   useEffect(() => subscribeTodayMajlis(setLiveStatuses), []);
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   const mergedEvents = useMemo(() => dedupeEvents([...homeEvents, ...allEvents]), [allEvents, homeEvents]);
   const upcomingEvents = useMemo(
-    () => filterUpcomingEvents(mergedEvents, liveStatuses, clock),
-    [clock, liveStatuses, mergedEvents],
+    () => filterUpcomingEvents(mergedEvents, liveStatuses, clock)
+      .filter((event) => event.date <= eventWindow.to),
+    [clock, eventWindow.to, liveStatuses, mergedEvents],
   );
   const scheduleEvents = useMemo(() => {
     if (audience === 'all') return upcomingEvents;

@@ -83,6 +83,12 @@ export type IslamicDate = {
   label: string;
 };
 
+export type EventQueryOptions = {
+  from?: string;
+  to?: string;
+  approvedOnly?: boolean;
+};
+
 export type HomePayload = {
   date: string;
   label: string;
@@ -157,16 +163,27 @@ const fallbackHome: HomePayload = {
   upcomingEvents: events,
 };
 
-export async function fetchEvents(filter = 'all'): Promise<CommunityEvent[]> {
-  if (isFirebaseBackendEnabled()) return fetchEventsFromFirebase(filter);
+export async function fetchEvents(
+  filter = 'all',
+  options: EventQueryOptions = {},
+): Promise<CommunityEvent[]> {
+  if (isFirebaseBackendEnabled()) return fetchEventsFromFirebase(filter, options);
 
   const result = await request<{ events: CommunityEvent[] }>(`/events?filter=${filter}`, { events });
-  return result.events;
+  return result.events
+    .filter((event) => !options.from || event.date >= options.from)
+    .filter((event) => !options.to || event.date <= options.to);
 }
 
-export function peekEvents(filter = 'all'): CommunityEvent[] | undefined {
-  if (isFirebaseBackendEnabled()) return peekEventsFromFirebase(filter);
-  return events.filter((event) => matchesFilter(event, filter as CalendarFilter));
+export function peekEvents(
+  filter = 'all',
+  options: EventQueryOptions = {},
+): CommunityEvent[] | undefined {
+  if (isFirebaseBackendEnabled()) return peekEventsFromFirebase(filter, options);
+  return events
+    .filter((event) => matchesFilter(event, filter as CalendarFilter))
+    .filter((event) => !options.from || event.date >= options.from)
+    .filter((event) => !options.to || event.date <= options.to);
 }
 
 export async function fetchCalendarMonth(date = getHoustonDate(), filter: CalendarFilter = 'all'): Promise<CalendarMonthPayload> {

@@ -79,13 +79,13 @@ export function HomeScheduleBoard({
       </View>
 
       <View style={styles.list}>
-        {events.slice(0, 8).map((event, index) => (
+        {events.map((event, index) => (
           <ScheduleRow
             key={event.id}
             compact={compact}
             canEdit={canEdit}
             event={event}
-            isLast={index === Math.min(events.length, 8) - 1}
+            isLast={index === events.length - 1}
           />
         ))}
         {events.length === 0 ? (
