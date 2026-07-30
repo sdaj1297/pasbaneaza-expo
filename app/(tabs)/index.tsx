@@ -463,13 +463,13 @@ function FeaturedFlyer({
       {Platform.OS === 'web' && landscapeFlyerUrl ? (
         <>
           <Image
-            {...webClassName('pasban-flyer-portrait')}
+            nativeID="pasban-flyer-portrait"
             resizeMode="contain"
             source={{ uri: event.flyerUrl }}
             style={[styles.flyerPoster, styles.flyerPosterPortrait]}
           />
           <Image
-            {...webClassName('pasban-flyer-landscape')}
+            nativeID="pasban-flyer-landscape"
             resizeMode="contain"
             source={{ uri: landscapeFlyerUrl }}
             style={[styles.flyerPoster, styles.flyerPosterLandscape]}
@@ -491,10 +491,6 @@ function FeaturedFlyer({
       )}
     </View>
   );
-}
-
-function webClassName(className: string) {
-  return Platform.OS === 'web' ? ({ className } as Record<string, string>) : {};
 }
 
 function FeaturedNotice({ event }: { event: SpecialEvent }) {

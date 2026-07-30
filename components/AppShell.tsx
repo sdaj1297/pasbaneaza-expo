@@ -91,7 +91,7 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
 
           {Platform.OS === 'web' ? (
             <>
-            <View {...webClassName('pasban-desktop-only')} style={styles.desktopNav}>
+            <View nativeID="pasban-desktop-nav" style={styles.desktopNav}>
               {desktopNav.map((item) => {
                 const matchPath = item.matchPath || String(item.href);
                 const active = pathname.startsWith(matchPath);
@@ -116,7 +116,7 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
                 </Pressable>
               </Link>
             </View>
-            <View {...webClassName('pasban-mobile-only')}>
+            <View nativeID="pasban-mobile-account">
               <Link href={accountHref} asChild>
                 <Pressable accessibilityLabel={accountLabel} style={styles.accountButton}>
                   <CircleUserRound color={colors.muted} size={22} strokeWidth={1.8} />
@@ -145,7 +145,7 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
       </ScrollView>
 
       {Platform.OS === 'web' ? (
-        <View {...webClassName('pasban-mobile-only')} style={styles.mobileNav}>
+        <View nativeID="pasban-mobile-nav" style={styles.mobileNav}>
           {mobileNav.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(String(item.href));
             const Icon = item.icon;
@@ -168,10 +168,6 @@ export function AppShell({ title, subtitle, compact = false, children }: AppShel
       ) : null}
     </View>
   );
-}
-
-function webClassName(className: string) {
-  return Platform.OS === 'web' ? ({ className } as Record<string, string>) : {};
 }
 
 const styles = StyleSheet.create({

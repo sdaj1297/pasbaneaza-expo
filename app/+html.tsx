@@ -44,34 +44,36 @@ body {
   box-sizing: border-box;
 }
 
-.pasban-mobile-only {
+#pasban-mobile-account,
+#pasban-mobile-nav {
   display: none !important;
 }
 
-.pasban-flyer-portrait {
+#pasban-flyer-portrait {
   display: none !important;
 }
 
-.pasban-flyer-landscape {
+#pasban-flyer-landscape {
   display: flex !important;
 }
 
 @media (max-width: 819px), (orientation: portrait) {
-  .pasban-desktop-only {
+  #pasban-desktop-nav {
     display: none !important;
   }
 
-  .pasban-mobile-only {
+  #pasban-mobile-account,
+  #pasban-mobile-nav {
     display: flex !important;
   }
 }
 
 @media (max-width: 699px), (orientation: portrait) {
-  .pasban-flyer-portrait {
+  #pasban-flyer-portrait {
     display: flex !important;
   }
 
-  .pasban-flyer-landscape {
+  #pasban-flyer-landscape {
     display: none !important;
   }
 }
