@@ -157,6 +157,11 @@ Body:
 }
 ```
 
+Public status writes open 30 minutes before the event's scheduled Houston start
+time. Each Firestore event stores `statusUpdatesOpenAt` as a timestamp, and the
+database rule rejects unauthenticated writes before that timestamp. Admin users
+may update status earlier from the admin page.
+
 Allowed statuses: `Pending`, `En Route`, `Started`, `Completed`, `Delayed`, `Skipped`.
 
 This endpoint is intentionally open for now. Auth can later be added at the route/middleware layer without changing the data contract.

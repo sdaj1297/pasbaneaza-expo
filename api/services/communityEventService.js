@@ -3,6 +3,7 @@ const { FieldValue, Timestamp } = require('firebase-admin/firestore');
 
 const { getFirebaseAdminDb } = require('../firebaseAdmin');
 const { getHoustonDate } = require('../utils/dates');
+const { getStatusUpdatesOpenAt } = require('../utils/statusUpdateWindow');
 
 const EVENT_AUDIENCES = new Map([
   ['Brothers', 'M'],
@@ -132,6 +133,10 @@ async function createCommunityEventSubmission(input, metadata = {}) {
 }
 
 function buildCommunityEventPayload(normalized, eventId, now) {
+  const statusUpdatesOpenAt = getStatusUpdatesOpenAt(
+    normalized.event.date,
+    normalized.event.time,
+  );
   return {
     id: eventId,
     eventId,
@@ -153,6 +158,7 @@ function buildCommunityEventPayload(normalized, eventId, now) {
     publish: true,
     waitingApproval: false,
     isPlaceholder: false,
+    statusUpdatesOpenAt: statusUpdatesOpenAt ? Timestamp.fromDate(statusUpdatesOpenAt) : null,
     source: 'community',
     createdAt: now,
     updatedAt: now,

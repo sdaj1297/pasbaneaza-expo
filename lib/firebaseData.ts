@@ -11,6 +11,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
 } from 'firebase/firestore';
@@ -58,6 +59,7 @@ import {
   setCached,
 } from '@/lib/dataCache';
 import { getHoustonPrayerTimes } from '@/lib/prayerTimes';
+import { getPublicStatusUpdateWindow } from '@/lib/statusUpdateWindow';
 
 const HOUSTON_TIME_ZONE = 'America/Chicago';
 const MAX_EVENT_READS = 250;
@@ -803,6 +805,7 @@ function normalizeSubmission(id: string, data: DocumentData): AdminEventSubmissi
 
 function serializeEvent(event: CommunityEvent): Record<string, unknown> {
   const isPublished = event.isPublished !== false && !event.isPlaceholder;
+  const statusWindow = getPublicStatusUpdateWindow(event);
   return {
     id: event.id,
     eventId: event.id,
@@ -825,6 +828,7 @@ function serializeEvent(event: CommunityEvent): Record<string, unknown> {
     publish: isPublished,
     waitingApproval: Boolean(event.waitingApproval),
     isPlaceholder: Boolean(event.isPlaceholder),
+    statusUpdatesOpenAt: statusWindow.opensAt ? Timestamp.fromDate(statusWindow.opensAt) : null,
     source: 'beta',
     updatedAt: serverTimestamp(),
   };

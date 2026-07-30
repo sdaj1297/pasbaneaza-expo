@@ -1,13 +1,14 @@
 require('dotenv').config();
 
 const { applicationDefault, cert, getApps, initializeApp } = require('firebase-admin/app');
-const { FieldValue, getFirestore } = require('firebase-admin/firestore');
+const { FieldValue, getFirestore, Timestamp } = require('firebase-admin/firestore');
 
 const { pool } = require('../db');
 const { getAllIslamicEvents, getIslamicCalendarYears } = require('../services/calendarService');
 const { getActiveAnnouncements, getFeaturedAnnouncement, getSayings } = require('../services/contentService');
 const { getEvents } = require('../services/eventService');
 const { getHoustonDate } = require('../utils/dates');
+const { getStatusUpdatesOpenAt } = require('../utils/statusUpdateWindow');
 
 const IMPORT_LIMIT = Number(process.env.FIRESTORE_IMPORT_LIMIT || 250);
 const IMPORT_FROM_DATE = process.env.FIRESTORE_IMPORT_FROM_DATE || getHoustonDate();
@@ -61,9 +62,11 @@ class BatchWriter {
 }
 
 function eventToFirestore(event) {
+  const statusUpdatesOpenAt = getStatusUpdatesOpenAt(event.date, event.time);
   return {
     ...event,
     sortTime: timeToMinutes(event.time),
+    statusUpdatesOpenAt: statusUpdatesOpenAt ? Timestamp.fromDate(statusUpdatesOpenAt) : null,
     importedAt: FieldValue.serverTimestamp(),
     source: 'legacy-mysql',
   };

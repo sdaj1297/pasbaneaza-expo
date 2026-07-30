@@ -24,16 +24,22 @@ import {
 } from '@/lib/api';
 import { getHoustonDate } from '@/lib/calendarUtils';
 import { majlisStages, majlisStatuses, stageForStatus } from '@/lib/majlisStatus';
+import { getPublicStatusUpdateWindow } from '@/lib/statusUpdateWindow';
 
 export default function StatusScreen() {
   const [items, setItems] = useState<StatusItem[] | null>(() => peekTodayMajlis() ?? null);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [updateError, setUpdateError] = useState('');
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => subscribeTodayMajlis(
     setItems,
     () => setUpdateError('Live updates are temporarily unavailable.'),
   ), []);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (items === null) {
     return (
@@ -51,12 +57,17 @@ export default function StatusScreen() {
   const statusDateLabel = formatStatusDate(statusDate);
   const statusIslamicDateLabel = items[0]?.islamicDate || '';
   const routeCountLabel = items.length === 1 ? '1 scheduled stop' : `${items.length} scheduled stops`;
+  const anyPublicUpdatesOpen = items.some((item) => getPublicStatusUpdateWindow(item, now).isOpen);
 
   const saveUpdate = async (
     item: StatusItem,
     status: MajlisStatus,
     stage = stageForStatus(status, item.stage),
   ) => {
+    if (!getPublicStatusUpdateWindow(item, new Date()).isOpen) {
+      setUpdateError('Public status updates are not open for this majlis yet.');
+      return;
+    }
     setBusyItemId(item.id);
     setNotice('');
     setUpdateError('');
@@ -123,9 +134,13 @@ export default function StatusScreen() {
 
       <View style={styles.communityNotice}>
         <View style={styles.communityNoticeCopy}>
-          <Text style={styles.communityNoticeTitle}>Community updates are open</Text>
+          <Text style={styles.communityNoticeTitle}>
+            {anyPublicUpdatesOpen ? 'Community updates are open' : 'Community updates open shortly before each majlis'}
+          </Text>
           <Text style={styles.communityNoticeText}>
-            Anyone at the majlis can keep the route current. Choose the correct stop and status below.
+            {anyPublicUpdatesOpen
+              ? 'Anyone at the majlis can keep eligible stops current. Choose the correct stop and status below.'
+              : 'Public controls become available 30 minutes before each scheduled start time.'}
           </Text>
         </View>
         {notice ? <Text style={styles.successNotice}>{notice}</Text> : null}
@@ -145,6 +160,7 @@ export default function StatusScreen() {
             index={index}
             isLast={index === items.length - 1}
             busy={busyItemId === item.id}
+            statusWindow={getPublicStatusUpdateWindow(item, now)}
             onStageChange={(stage) => saveUpdate(item, 'Started', stage)}
             onStatusChange={(status) => saveUpdate(item, status)}
           />
@@ -168,6 +184,7 @@ function TimelineItem({
   index,
   isLast,
   busy,
+  statusWindow,
   onStageChange,
   onStatusChange,
 }: {
@@ -175,6 +192,7 @@ function TimelineItem({
   index: number;
   isLast: boolean;
   busy: boolean;
+  statusWindow: ReturnType<typeof getPublicStatusUpdateWindow>;
   onStageChange: (stage: string) => void;
   onStatusChange: (status: MajlisStatus) => void;
 }) {
@@ -226,7 +244,7 @@ function TimelineItem({
           </Pressable>
         ) : null}
 
-        <View style={styles.updatePanel}>
+        {statusWindow.isOpen ? <View style={styles.updatePanel}>
           <View style={styles.updateHeading}>
             <Text style={styles.updateTitle}>Update this stop</Text>
             <Text style={styles.updateHint}>{busy ? 'Saving…' : 'Changes appear live for everyone'}</Text>
@@ -281,7 +299,15 @@ function TimelineItem({
               </View>
             </View>
           ) : null}
-        </View>
+        </View> : (
+          <View style={styles.lockedPanel}>
+            <Clock3 color={colors.goldDark} size={17} strokeWidth={1.9} />
+            <View style={styles.lockedCopy}>
+              <Text style={styles.lockedTitle}>Public updates are locked</Text>
+              <Text style={styles.lockedText}>{statusWindow.opensLabel}</Text>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -635,6 +661,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     marginTop: spacing.md,
     paddingTop: spacing.md,
+  },
+  lockedPanel: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  lockedCopy: {
+    flex: 1,
+  },
+  lockedTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.small,
+  },
+  lockedText: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: typography.overline,
+    lineHeight: 17,
+    marginTop: 2,
   },
   updateHeading: {
     alignItems: 'baseline',

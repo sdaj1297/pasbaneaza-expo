@@ -28,6 +28,12 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.admin == true;
     }
 
+    function publicStatusWindowIsOpen(eventId) {
+      return exists(/databases/$(database)/documents/events/$(eventId))
+        && get(/databases/$(database)/documents/events/$(eventId)).data.statusUpdatesOpenAt is timestamp
+        && request.time >= get(/databases/$(database)/documents/events/$(eventId)).data.statusUpdatesOpenAt;
+    }
+
     match /events/{eventId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -53,7 +59,8 @@ service cloud.firestore {
         && request.resource.data.source == "community"
         && request.resource.data.stage is string
         && request.resource.data.updatedAt == request.time
-        && isValidStatus();
+        && isValidStatus()
+        && (isAdmin() || publicStatusWindowIsOpen(eventId));
 
       allow delete: if false;
     }

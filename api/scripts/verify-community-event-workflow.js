@@ -5,6 +5,7 @@ const {
   normalizeCommunityEventInput,
 } = require('../services/communityEventService');
 const { getHoustonDate } = require('../utils/dates');
+const { getStatusUpdatesOpenAt } = require('../utils/statusUpdateWindow');
 
 function addDays(value, days) {
   const [year, month, day] = value.split('-').map(Number);
@@ -45,6 +46,15 @@ assert.equal(publicEvent.isAnjumanSchedule, false);
 assert.equal(publicEvent.anjumanApprovalStatus, 'pending');
 assert.equal(Object.hasOwn(publicEvent, 'email'), false);
 assert.equal(Object.hasOwn(publicEvent, 'phone'), false);
+assert.equal(
+  getStatusUpdatesOpenAt('2026-07-30', '7:00 PM').toISOString(),
+  '2026-07-30T23:30:00.000Z',
+);
+assert.equal(
+  getStatusUpdatesOpenAt('2026-12-12', '2:30 PM').toISOString(),
+  '2026-12-12T20:00:00.000Z',
+);
+assert.equal(getStatusUpdatesOpenAt('2026-12-12', 'TBA'), null);
 
 expectValidationError(
   { ...validInput, email: 'not-an-email' },

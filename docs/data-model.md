@@ -123,3 +123,7 @@ Community event publication and Anjuman participation are independent:
 
 Contact email and phone remain in the admin-only `submissions` collection and
 are not copied into public event documents.
+
+Each event also stores `statusUpdatesOpenAt`, calculated as 30 minutes before
+its scheduled start in `America/Chicago`. Public live-status writes are rejected
+before this timestamp; authenticated admins are exempt from the public window.

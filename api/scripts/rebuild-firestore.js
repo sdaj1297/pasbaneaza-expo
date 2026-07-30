@@ -7,10 +7,11 @@ const path = require('path');
 const zlib = require('zlib');
 
 const { cert, getApps, initializeApp } = require('firebase-admin/app');
-const { FieldValue, getFirestore } = require('firebase-admin/firestore');
+const { FieldValue, getFirestore, Timestamp } = require('firebase-admin/firestore');
 
 const { pool } = require('../db');
 const { extractFirstImageUrl, stripHtml } = require('../utils/text');
+const { getStatusUpdatesOpenAt } = require('../utils/statusUpdateWindow');
 
 const PRESERVED_BANNER_ID = 'beta-shab-e-aza-2026';
 const EXCLUDED_ANNOUNCEMENT_ID = '9';
@@ -205,14 +206,17 @@ async function buildSnapshot() {
       : [row.loc_address1, row.loc_address2, row.loc_city, row.loc_state, row.loc_zip];
     const id = String(row.id);
     const time = clean(row.event_time);
+    const date = dateValue(row.event_date);
+    const statusUpdatesOpenAt = getStatusUpdatesOpenAt(date, time);
     return {
       id,
       eventId: id,
       title: clean(row.title) || 'Majlis',
       contactName: clean(row.contact_name) || clean(row.title) || 'Pasban-e-Aza',
-      date: dateValue(row.event_date),
+      date,
       time,
       sortTime: timeToMinutes(time),
+      statusUpdatesOpenAt: statusUpdatesOpenAt ? Timestamp.fromDate(statusUpdatesOpenAt) : null,
       islamicDate: '',
       type: clean(row.event_type || 'F'),
       locationName: clean(useCenter ? row.center_name : row.location_name || 'Residence'),
