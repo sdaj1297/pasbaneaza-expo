@@ -127,7 +127,8 @@ function filterEvents(
       .filter((event) => isPublicEvent(event, Boolean(options.approvedOnly)))
       .filter((event) => event.date >= from)
       .filter((event) => !options.to || event.date <= options.to)
-      .filter((event) => matchesFilter(event, filter));
+      .filter((event) => matchesFilter(event, filter))
+      .sort(compareEvents);
 }
 
 export async function fetchCalendarMonthFromFirebase(
@@ -926,5 +927,7 @@ function toSortTime(time: string) {
 function compareEvents(left: CommunityEvent, right: CommunityEvent) {
   const leftKey = `${left.date} ${toSortTime(left.time)}`;
   const rightKey = `${right.date} ${toSortTime(right.time)}`;
-  return leftKey.localeCompare(rightKey);
+  const chronologicalOrder = leftKey.localeCompare(rightKey);
+  if (chronologicalOrder !== 0) return chronologicalOrder;
+  return left.id.localeCompare(right.id, undefined, { numeric: true });
 }
