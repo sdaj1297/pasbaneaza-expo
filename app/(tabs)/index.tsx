@@ -121,7 +121,10 @@ export default function HomeScreen() {
   useEffect(() => subscribeTodayMajlis(setLiveStatuses), []);
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
-  const mergedEvents = useMemo(() => dedupeEvents([...homeEvents, ...allEvents]), [allEvents, homeEvents]);
+  const mergedEvents = useMemo(
+    () => dedupeEvents([...liveStatuses, ...homeEvents, ...allEvents]),
+    [allEvents, homeEvents, liveStatuses],
+  );
   const upcomingEvents = useMemo(
     () => filterUpcomingEvents(mergedEvents, liveStatuses, clock)
       .filter((event) => event.date <= eventWindow.to),
@@ -137,21 +140,18 @@ export default function HomeScreen() {
     [currentDate, mergedEvents],
   );
   const activeMajlis = selectActiveMajlisStatus(liveStatuses);
-  const nextAnjuman = selectNextCommittedEvent(
-    activeMajlis
-      ? mergedEvents.filter((event) => event.id !== activeMajlis.id)
-      : mergedEvents,
-    liveStatuses,
-    clock,
-  );
+  const nextAnjuman = selectNextCommittedEvent(mergedEvents, liveStatuses, clock);
+  const isCurrentMajlis = Boolean(activeMajlis && nextAnjuman?.id === activeMajlis.id);
   const nextDateRelation = nextAnjuman
     ? getRelativeDateLabel(nextAnjuman.date, currentDate)
     : '';
-  const nextMajlisLabel = nextDateRelation === 'Today'
-    ? 'Later today'
-    : nextDateRelation === 'Tomorrow'
-      ? "Tomorrow's committed majlis"
-      : 'Next committed majlis';
+  const nextMajlisLabel = isCurrentMajlis
+    ? 'Current committed majlis'
+    : nextDateRelation === 'Today'
+      ? 'Later today'
+      : nextDateRelation === 'Tomorrow'
+        ? "Tomorrow's committed majlis"
+        : 'Next committed majlis';
   const hasRealFlyer = Boolean(featured?.isActive && featured.flyerUrl);
   const hasLiveStream = Boolean(
     featured?.liveStreamUrl && !featured.liveStreamUrl.includes('PLACEHOLDER'),
