@@ -233,18 +233,19 @@ function CalendarCell({
           ? formatCompactIslamicDate(day.islamicDate)
           : day.islamicDate?.label || 'Hijri pending'}
       </Text>
-      {day.islamicEvents.length && !compact ? (
-        <Text numberOfLines={1} style={styles.observanceText}>
+      {day.islamicEvents.length ? (
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          numberOfLines={compact ? 3 : 2}
+          style={[styles.observanceText, compact && styles.compactObservanceText]}
+        >
           {day.islamicEvents[0].title}
         </Text>
       ) : null}
-      <View style={[styles.eventStack, compact && styles.compactEventStack]}>
-        {compact ? (
-          day.events.slice(0, 4).map((event) => (
-            <View key={event.id} style={[styles.eventDot, styles[`${getEventTone(event)}Dot`]]} />
-          ))
-        ) : (
-          day.events.slice(0, 3).map((event) => (
+      {!compact ? (
+        <View style={styles.eventStack}>
+          {day.events.slice(0, 3).map((event) => (
             <View key={event.id} style={[styles.eventChip, styles[`${getEventTone(event)}Chip`]]}>
               <Text numberOfLines={2} style={styles.eventChipText}>
                 {event.time ? `${event.time} ` : ''}{event.contactName || event.title}
@@ -257,9 +258,9 @@ function CalendarCell({
                 />
               ) : null}
             </View>
-          ))
-        )}
-      </View>
+          ))}
+        </View>
+      ) : null}
       {!compact && day.events.length > 3 ? (
         <Text style={styles.moreText}>+{day.events.length - 3} more</Text>
       ) : null}
@@ -511,10 +512,11 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     flexBasis: '14.2857%',
     minHeight: 150,
+    overflow: 'hidden',
     padding: spacing.sm,
   },
   compactDayCell: {
-    minHeight: 76,
+    minHeight: 90,
     padding: spacing.xs,
   },
   offMonthCell: {
@@ -562,16 +564,17 @@ const styles = StyleSheet.create({
     color: colors.oxblood,
     fontFamily: fonts.bodyBold,
     fontSize: 9,
+    lineHeight: 11,
     marginTop: spacing.xs,
+  },
+  compactObservanceText: {
+    fontSize: 8,
+    lineHeight: 10,
+    marginTop: 3,
+    width: '100%',
   },
   eventStack: {
     gap: 4,
-    marginTop: spacing.xs,
-  },
-  compactEventStack: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 3,
     marginTop: spacing.xs,
   },
   eventChip: {
@@ -607,20 +610,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 2,
     width: 13,
-  },
-  eventDot: {
-    borderRadius: 999,
-    height: 6,
-    width: 6,
-  },
-  committedDot: {
-    backgroundColor: colors.goldDark,
-  },
-  sistersDot: {
-    backgroundColor: '#397994',
-  },
-  communityDot: {
-    backgroundColor: '#3e7659',
   },
   moreText: {
     color: colors.onIvoryMuted,
