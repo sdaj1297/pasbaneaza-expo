@@ -122,7 +122,7 @@ export default function HomeScreen() {
   useEffect(() => subscribeToAuthState(setAuthUser), []);
 
   const mergedEvents = useMemo(
-    () => dedupeEvents([...liveStatuses, ...homeEvents, ...allEvents]),
+    () => dedupeEvents([...homeEvents, ...allEvents, ...liveStatuses]),
     [allEvents, homeEvents, liveStatuses],
   );
   const upcomingEvents = useMemo(

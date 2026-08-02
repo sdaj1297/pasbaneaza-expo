@@ -224,14 +224,16 @@ export async function fetchTodayMajlisFromFirebase(): Promise<StatusItem[]> {
     const today = getHoustonDate();
     return await loadCached(`firebase:status:${today}`, async () => {
     const db = getFirebaseDb();
-    const [eventSnapshot, statusSnapshot] = await Promise.all([
+    const [eventSnapshot, statusSnapshot, calendarYears] = await Promise.all([
       getDocs(query(collection(db, 'eventDays', today, 'items'), orderBy('sortTime'), limit(MAX_EVENT_READS))),
       getDocs(collection(db, 'majlisStatus', today, 'events')),
+      fetchIslamicCalendarYearsFromFirebase(),
     ]);
 
     const statusByEventId = new Map(statusSnapshot.docs.map((statusDoc) => [statusDoc.id, statusDoc.data()]));
     let events = eventSnapshot.docs
       .map((eventDoc) => normalizeEvent(eventDoc.id, eventDoc.data()))
+      .map((event) => withCalculatedIslamicDate(event, calendarYears))
       .filter((event) => isPublicEvent(event, true))
       .filter((event) => event.isAnjumanSchedule);
 
@@ -296,6 +298,7 @@ export function subscribeTodayMajlisFromFirebase(
   const db = getFirebaseDb();
   const today = getHoustonDate();
   const cacheKey = `firebase:status:${today}`;
+  const calendarYearsPromise = fetchIslamicCalendarYearsFromFirebase();
   let eventItems: CommunityEvent[] = [];
   let statusByEventId = new Map<string, DocumentData>();
   let eventsReady = false;
@@ -304,7 +307,8 @@ export function subscribeTodayMajlisFromFirebase(
 
   const publish = async () => {
     if (!eventsReady || !statusesReady || disposed) return;
-    let events = eventItems;
+    const calendarYears = await calendarYearsPromise;
+    let events = eventItems.map((event) => withCalculatedIslamicDate(event, calendarYears));
     if (!events.length) {
       events = (await fetchEventsFromFirebase('anjuman')).filter((event) => event.date === today);
     }
